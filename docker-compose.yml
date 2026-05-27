@@ -8,8 +8,8 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/arclat
-      - REDIS_URL=redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/arclat
+      REDIS_URL: redis://redis:6379/0
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - db
@@ -20,8 +20,8 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/arclat
-      - REDIS_URL=redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/arclat
+      REDIS_URL: redis://redis:6379/0
     command: celery -A app.tasks.audit_tasks worker --loglevel=info
     depends_on:
       - db
@@ -37,6 +37,6 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=arclat
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: arclat
