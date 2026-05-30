@@ -8,7 +8,7 @@ class BlockingIODetector(BaseDetector):
         agent_loops = [s for s in timeline if s.span_type == "agent_loop"]
         if not agent_loops:
             # Fallback if no explicit agent_loop is defined: just check db/api calls
-            agent_loops = [Span(id="dummy", name="global", start_ms=0, end_ms=float('inf'), duration_ms=0, span_type="agent_loop")]
+            agent_loops = [Span(id="dummy", name="global", start_ms=0, end_ms=10**9, duration_ms=0, span_type="agent_loop")]
 
         for loop in agent_loops:
             # Find DB/API calls completely contained within this agent_loop

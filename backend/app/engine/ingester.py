@@ -1,6 +1,9 @@
 import json
+import logging
 from typing import List, Dict, Any
 from app.engine.base_detector import Span
+
+logger = logging.getLogger(__name__)
 
 def parse_logs(raw_json: str) -> List[Span]:
     try:
@@ -24,7 +27,8 @@ def parse_logs(raw_json: str) -> List[Span]:
             ))
             
         return sorted(timeline, key=lambda s: s.start_ms)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.warning("Failed to parse log input as JSON: %s", e)
         return []
 
 def parse_description(text: str) -> List[Span]:

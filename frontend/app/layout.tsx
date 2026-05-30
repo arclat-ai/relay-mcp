@@ -22,9 +22,9 @@ export default function RootLayout({
       <body className={`${inter.variable} ${syne.variable} font-body min-h-screen flex flex-col antialiased bg-app`}> 
         <div className="flex min-h-screen flex-col">
           <Header />
-          <main className="flex-1 w-full">
+          <div className="flex-1 w-full">
             {children}
-          </main>
+          </div>
           <Footer />
         </div>
       </body>

@@ -7,8 +7,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(db: AsyncSession = Depends(get_db)):
-    pass
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 @router.patch("/me", response_model=UserResponse)
 async def update_current_user(user_update: UserUpdate, db: AsyncSession = Depends(get_db)):
-    pass
+    raise HTTPException(status_code=501, detail="Not implemented")

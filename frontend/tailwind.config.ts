@@ -11,7 +11,7 @@ const config: Config = {
         background: '#0a0a0a',
         surface: '#111111',
         border: '#222222',
-        accent: '#00FF88',
+        accent: '#46f5a5',
         textPrimary: '#ffffff',
         textSecondary: '#888888',
         error: '#FF4444',

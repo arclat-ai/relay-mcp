@@ -48,7 +48,7 @@ def generate_report_html(result, pipeline_info) -> str:
             <p>{b.description}</p>
             <p><strong>Time Lost:</strong> {b.time_lost_ms} ms | <strong>Location:</strong> {b.location}</p>
             <hr style="border-color: #333;">
-            <p><strong>Recommendation:</strong> {b.explanation}</p>
+            <p><strong>Recommendation:</strong> {b.description}</p>
             <p>Effort: {b.effort} | Impact: {b.impact}</p>
             <h4>Before:</h4>
             <pre><code>{b.code_before}</code></pre>
@@ -135,10 +135,13 @@ async def _process_audit_async(audit_id_str: str):
         except Exception as e:
             logger.error(f"Audit {audit_id_str} failed: {str(e)}", exc_info=True)
             await session.rollback()
-            
-            # 8. Set status failed
-            audit.status = "failed"
-            await session.commit()
+
+            # Re-fetch after rollback — the previous audit object is now detached
+            result = await session.execute(select(Audit).where(Audit.id == uuid.UUID(audit_id_str)))
+            audit = result.scalar_one_or_none()
+            if audit:
+                audit.status = "failed"
+                await session.commit()
 
 @celery_app.task
 def run_audit(audit_id: str):

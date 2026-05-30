@@ -12,8 +12,8 @@ export default function CodeDiff({ codeBefore, codeAfter }: { codeBefore: string
           </pre>
        </div>
        
-       <div className="bg-[#1e1e1e] border border-[#00FF88]/30 rounded overflow-hidden">
-          <div className="bg-[#00FF88]/10 text-accent text-xs px-4 py-2 border-b border-[#00FF88]/30 flex justify-between font-bold">
+       <div className="bg-[#1e1e1e] border border-[#46f5a5]/30 rounded overflow-hidden">
+          <div className="bg-[#46f5a5]/10 text-accent text-xs px-4 py-2 border-b border-[#46f5a5]/30 flex justify-between font-bold">
             <span>After (optimized)</span>
           </div>
           <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300">

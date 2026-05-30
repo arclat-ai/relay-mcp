@@ -7,8 +7,8 @@
   --muted: #888888;
   --text: #ffffff;
   --card: #0f1113;
-  --accent: #00FF88;
-  --accent-600: #00cc6e;
+  --accent: #46f5a5;
+  --accent-600: #19d17d;
   --glass: rgba(255,255,255,0.04);
   --elev-1: 0 6px 18px rgba(0,0,0,0.6);
   --radius-lg: 18px;
@@ -16,7 +16,7 @@
 
 @layer base {
   html {
-    background: var(--bg);
+    background: radial-gradient(circle at top, rgba(70,245,165,0.12), transparent 28%), var(--bg);
   }
 
   body {
@@ -24,6 +24,10 @@
     color: var(--text);
     background-color: var(--bg);
     font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    background-image:
+      radial-gradient(circle at top left, rgba(70,245,165,0.12), transparent 26%),
+      radial-gradient(circle at 80% 15%, rgba(255,255,255,0.06), transparent 22%),
+      linear-gradient(180deg, rgba(255,255,255,0.03), transparent 18%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -37,8 +41,20 @@
     color: #000;
   }
 
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-syne), var(--font-inter), system-ui, sans-serif;
+  }
+
+  a {
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  }
+
+  button {
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  }
+
   .bg-app {
-    background-image: linear-gradient(180deg, rgba(0,255,136,0.03), transparent 40%);
+    background-image: linear-gradient(180deg, rgba(70,245,165,0.03), transparent 40%);
   }
 
   .card {
@@ -58,6 +74,8 @@
   .text-textSecondary { color: var(--muted) !important; }
   .bg-white\/5 { background-color: rgba(255,255,255,0.04) !important; }
   .bg-black\/30 { background-color: rgba(0,0,0,0.3) !important; }
+  .bg-white\/6 { background-color: rgba(255,255,255,0.05) !important; }
+  .bg-accent\/8 { background-color: rgba(70,245,165,0.08) !important; }
   .border-white\/10 { border-color: rgba(255,255,255,0.06) !important; }
   .border-white\/15 { border-color: rgba(255,255,255,0.08) !important; }
 }

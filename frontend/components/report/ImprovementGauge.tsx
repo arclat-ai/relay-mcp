@@ -1,8 +1,9 @@
+'use client'
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 export default function ImprovementGauge({ pct }: { pct: number }) {
   const data = [
-    { name: 'Improvement', value: pct, fill: '#00FF88' },
+    { name: 'Improvement', value: pct, fill: '#46f5a5' },
   ];
 
   return (

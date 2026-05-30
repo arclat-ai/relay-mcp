@@ -15,13 +15,12 @@ async def list_pipelines(db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=PipelineResponse)
 async def create_pipeline(pipeline: PipelineCreate, db: AsyncSession = Depends(get_db)):
-    # Auth stub
-    pass
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 @router.get("/{id}", response_model=PipelineResponse)
 async def get_pipeline(id: UUID, db: AsyncSession = Depends(get_db)):
-    pass
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 @router.delete("/{id}")
 async def delete_pipeline(id: UUID, db: AsyncSession = Depends(get_db)):
-    pass
+    raise HTTPException(status_code=501, detail="Not implemented")
