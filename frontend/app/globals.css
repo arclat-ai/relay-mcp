@@ -2,7 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: theme('colors.background');
-  color: theme('colors.textPrimary');
+:root {
+  --bg: #0a0a0a;
+  --muted: #888888;
+  --text: #ffffff;
+  --card: #0f1113;
+  --accent: #00FF88;
+  --accent-600: #00cc6e;
+  --glass: rgba(255,255,255,0.04);
+  --elev-1: 0 6px 18px rgba(0,0,0,0.6);
+  --radius-lg: 18px;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+  }
+
+  body {
+    min-height: 100vh;
+    color: var(--text);
+    background-color: var(--bg);
+    font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    border-color: rgba(255,255,255,0.04);
+  }
+
+  ::selection {
+    background: rgba(0,255,136,0.12);
+    color: #000;
+  }
+
+  .bg-app {
+    background-image: linear-gradient(180deg, rgba(0,255,136,0.03), transparent 40%);
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), var(--card));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elev-1);
+  }
+
+  :root {
+    --container-padding: 1.5rem;
+  }
+
+  .container { max-width: 1100px; margin-left: auto; margin-right: auto; padding-left: var(--container-padding); padding-right: var(--container-padding); }
+
+  /* Compatibility overrides for existing dark-themed utility classes */
+  .text-white { color: var(--text) !important; }
+  .text-textSecondary { color: var(--muted) !important; }
+  .bg-white\/5 { background-color: rgba(255,255,255,0.04) !important; }
+  .bg-black\/30 { background-color: rgba(0,0,0,0.3) !important; }
+  .border-white\/10 { border-color: rgba(255,255,255,0.06) !important; }
+  .border-white\/15 { border-color: rgba(255,255,255,0.08) !important; }
 }

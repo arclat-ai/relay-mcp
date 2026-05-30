@@ -1,6 +1,8 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter, Syne } from 'next/font/google'
+import Header from '../components/ui/Header'
+import Footer from '../components/ui/Footer'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const syne = Syne({ subsets: ['latin'], variable: '--font-syne' })
@@ -17,8 +19,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${syne.variable} font-body min-h-screen flex flex-col`}>
-        {children}
+      <body className={`${inter.variable} ${syne.variable} font-body min-h-screen flex flex-col antialiased bg-app`}> 
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1 w-full">
+            {children}
+          </main>
+          <Footer />
+        </div>
       </body>
     </html>
   )
