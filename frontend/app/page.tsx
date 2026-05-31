@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { Zap, BarChart3, Wrench } from 'lucide-react'
+
+const featureIcons = [Zap, BarChart3, Wrench]
 
 export default function Home() {
   return (
@@ -120,13 +123,18 @@ export default function Home() {
               title: 'Specific fixes',
               description: 'You get concrete changes, not generic performance slogans or vague tuning advice.',
             },
-          ].map((feature) => (
-            <article key={feature.title} className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-transform hover:-translate-y-1">
-              <div className="mb-5 h-11 w-11 rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/20 to-white/5" />
-              <h2 className="font-heading text-xl font-semibold text-[var(--text)]">{feature.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-textSecondary">{feature.description}</p>
-            </article>
-          ))}
+          ].map((feature, i) => {
+            const Icon = featureIcons[i]
+            return (
+              <article key={feature.title} className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-transform hover:-translate-y-1">
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/20 to-white/5">
+                  <Icon size={20} className="text-accent" />
+                </div>
+                <h2 className="font-heading text-xl font-semibold text-[var(--text)]">{feature.title}</h2>
+                <p className="mt-3 text-sm leading-7 text-textSecondary">{feature.description}</p>
+              </article>
+            )
+          })}
         </section>
 
         <section className="grid gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl sm:grid-cols-3 sm:p-8">
