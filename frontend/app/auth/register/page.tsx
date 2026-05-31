@@ -13,6 +13,10 @@ export default function RegisterPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
+  function setAuthCookie(token: string) {
+    document.cookie = `sb-access-token=${encodeURIComponent(token)}; path=/; max-age=86400; samesite=lax`
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -29,6 +33,7 @@ export default function RegisterPage() {
         return
       }
       localStorage.setItem('token', data.token)
+      setAuthCookie(data.token)
       router.push('/dashboard')
     } catch {
       setError('Unable to reach the server. Try again.')
