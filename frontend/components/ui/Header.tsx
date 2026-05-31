@@ -3,17 +3,34 @@
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, Upload, FileText, UserCircle, LogOut, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Upload, FileText, UserCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react'
 
 export default function Header() {
   const [authed, setAuthed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
     setAuthed(!!localStorage.getItem('token'))
+    const stored = localStorage.getItem('theme') as 'dark' | 'light' | null
+    if (stored) {
+      setTheme(stored)
+      document.documentElement.setAttribute('data-theme', stored)
+    }
   }, [])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    localStorage.setItem('theme', next)
+    if (next === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -60,6 +77,13 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="flex items-center justify-center rounded-full border border-white/10 p-2 text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)] transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           {authed ? (
             <div ref={menuRef} className="relative">
               <button
