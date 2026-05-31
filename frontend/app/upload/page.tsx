@@ -73,13 +73,13 @@ export default function UploadPage() {
         <section className="rounded-[2rem] border border-white/10 bg-[#0d1014]/90 p-4 shadow-[0_40px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-6 lg:p-8">
           <div className="flex flex-wrap gap-3 rounded-full border border-white/10 bg-black/20 p-1">
             <button
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === 'logs' ? 'bg-accent text-black' : 'text-textSecondary hover:text-white'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === 'logs' ? 'bg-accent text-[#06111a]' : 'text-textSecondary hover:text-white'}`}
               onClick={() => { setTab('logs'); setResult(null); setError('') }}
             >
               Upload logs (JSON)
             </button>
             <button
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === 'text' ? 'bg-accent text-black' : 'text-textSecondary hover:text-white'}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === 'text' ? 'bg-accent text-[#06111a]' : 'text-textSecondary hover:text-white'}`}
               onClick={() => { setTab('text'); setResult(null); setError('') }}
             >
               Describe your pipeline
@@ -133,7 +133,7 @@ export default function UploadPage() {
                   <button
                     onClick={submitDescription}
                     disabled={loading || !description.trim()}
-                    className="flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-black transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+                    className="flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-[#06111a] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
                   >
                     {loading && <Loader2 size={14} className="animate-spin" />}
                     {loading ? 'Auditing…' : 'Submit description'}

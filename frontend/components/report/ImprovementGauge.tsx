@@ -3,7 +3,7 @@ import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from '
 
 export default function ImprovementGauge({ pct }: { pct: number }) {
   const data = [
-    { name: 'Improvement', value: pct, fill: '#46f5a5' },
+    { name: 'Improvement', value: pct, fill: '#7dd6f5' },
   ];
 
   return (

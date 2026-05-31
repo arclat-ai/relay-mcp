@@ -128,7 +128,7 @@ export default function LogUploader() {
               <button
                 onClick={handleAudit}
                 disabled={loading}
-                className="flex items-center gap-2 rounded-full bg-accent px-8 py-2.5 text-sm font-semibold text-black transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+                className="flex items-center gap-2 rounded-full bg-accent px-8 py-2.5 text-sm font-semibold text-[#06111a] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Auditing…' : 'Audit logs'}

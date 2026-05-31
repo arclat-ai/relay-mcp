@@ -2,7 +2,7 @@ export default function SeverityBadge({ severity }: { severity: 'high' | 'medium
   const colors = {
     high: 'bg-error text-white',
     medium: 'bg-warning text-white',
-    low: 'bg-[#00AA44] text-white' // using a darker green for low severity so text is readable
+    low: 'bg-[#1a7a9e] text-white'
   }
   
   const selectedColor = colors[(severity || 'low').toLowerCase() as keyof typeof colors] || colors.low

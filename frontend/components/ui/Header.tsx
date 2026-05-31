@@ -37,7 +37,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/30 backdrop-blur-2xl">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 sm:px-10 lg:px-12">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(70,245,165,0.24)]" style={{background: 'linear-gradient(135deg, var(--accent), var(--accent-600))'}}>A</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(125,214,245,0.28)]" style={{background: 'linear-gradient(135deg, var(--accent-600), #1a6e8a)'}}>A</div>
           <div>
             <div className="font-heading text-lg font-semibold tracking-tight">Arclat</div>
             <div className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">AI latency optimizer</div>
@@ -84,7 +84,7 @@ export default function Header() {
           ) : (
             <>
               <Link href="/auth/login" className="rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]">Sign in</Link>
-              <Link href="/auth/register" className="rounded-full px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(70,245,165,0.18)]" style={{background: 'linear-gradient(90deg, var(--accent), var(--accent-600))'}}>Get started</Link>
+              <Link href="/auth/register" className="rounded-full px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(125,214,245,0.22)]" style={{background: 'linear-gradient(90deg, var(--accent-600), #1a6e8a)'}}>Get started</Link>
             </>
           )}
         </div>

@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0a0a;
-  --muted: #888888;
-  --text: #ffffff;
-  --card: #0f1113;
-  --accent: #46f5a5;
-  --accent-600: #19d17d;
-  --glass: rgba(255,255,255,0.04);
+  --bg: #080d12;
+  --muted: #7a8fa6;
+  --text: #e8f4fb;
+  --card: #0d1520;
+  --accent: #7dd6f5;
+  --accent-600: #3bafd4;
+  --glass: rgba(125,214,245,0.03);
   --elev-1: 0 6px 18px rgba(0,0,0,0.6);
   --radius-lg: 18px;
 }
 
 @layer base {
   html {
-    background: radial-gradient(circle at top, rgba(70,245,165,0.12), transparent 28%), var(--bg);
+    background: radial-gradient(circle at top, rgba(125,214,245,0.10), transparent 30%), var(--bg);
   }
 
   body {
@@ -25,20 +25,20 @@
     background-color: var(--bg);
     font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     background-image:
-      radial-gradient(circle at top left, rgba(70,245,165,0.12), transparent 26%),
-      radial-gradient(circle at 80% 15%, rgba(255,255,255,0.06), transparent 22%),
-      linear-gradient(180deg, rgba(255,255,255,0.03), transparent 18%);
+      radial-gradient(circle at top left, rgba(125,214,245,0.09), transparent 28%),
+      radial-gradient(circle at 80% 15%, rgba(59,175,212,0.05), transparent 24%),
+      linear-gradient(180deg, rgba(125,214,245,0.02), transparent 20%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   * {
-    border-color: rgba(255,255,255,0.04);
+    border-color: rgba(125,214,245,0.06);
   }
 
   ::selection {
-    background: rgba(0,255,136,0.12);
-    color: #000;
+    background: rgba(125,214,245,0.18);
+    color: #fff;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -54,11 +54,11 @@
   }
 
   .bg-app {
-    background-image: linear-gradient(180deg, rgba(70,245,165,0.03), transparent 40%);
+    background-image: linear-gradient(180deg, rgba(125,214,245,0.03), transparent 40%);
   }
 
   .card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), var(--card));
+    background: linear-gradient(180deg, rgba(125,214,245,0.02), var(--card));
     border-radius: var(--radius-lg);
     box-shadow: var(--elev-1);
   }
@@ -69,13 +69,12 @@
 
   .container { max-width: 1100px; margin-left: auto; margin-right: auto; padding-left: var(--container-padding); padding-right: var(--container-padding); }
 
-  /* Compatibility overrides for existing dark-themed utility classes */
   .text-white { color: var(--text) !important; }
   .text-textSecondary { color: var(--muted) !important; }
-  .bg-white\/5 { background-color: rgba(255,255,255,0.04) !important; }
+  .bg-white\/5 { background-color: rgba(125,214,245,0.03) !important; }
   .bg-black\/30 { background-color: rgba(0,0,0,0.3) !important; }
-  .bg-white\/6 { background-color: rgba(255,255,255,0.05) !important; }
-  .bg-accent\/8 { background-color: rgba(70,245,165,0.08) !important; }
-  .border-white\/10 { border-color: rgba(255,255,255,0.06) !important; }
-  .border-white\/15 { border-color: rgba(255,255,255,0.08) !important; }
+  .bg-white\/6 { background-color: rgba(125,214,245,0.04) !important; }
+  .bg-accent\/8 { background-color: rgba(125,214,245,0.08) !important; }
+  .border-white\/10 { border-color: rgba(125,214,245,0.08) !important; }
+  .border-white\/15 { border-color: rgba(125,214,245,0.10) !important; }
 }

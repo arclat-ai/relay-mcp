@@ -48,7 +48,7 @@ export default function LoginPage() {
 
         {/* Brand panel */}
         <section className="relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-10 lg:p-12">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.06),transparent_28%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(125,214,245,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.06),transparent_28%)]" />
           <div className="relative">
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Welcome back</p>
             <h2 className="mt-3 font-heading text-4xl font-semibold text-white">Login</h2>
@@ -111,7 +111,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-black transition hover:bg-[var(--accent-600)] disabled:opacity-50"
+              className="mt-2 w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-[#06111a] transition hover:bg-[var(--accent-600)] disabled:opacity-50"
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
