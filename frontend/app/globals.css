@@ -3,122 +3,87 @@
 @tailwind utilities;
 
 :root {
-  --bg: #080d12;
-  --muted: #7a8fa6;
-  --text: #e8f4fb;
-  --card: #0d1520;
+  --bg: #0a0a0a;
+  --muted: #6b7280;
+  --text: #f5f5f5;
+  --card: #111111;
+  --border: rgba(255,255,255,0.08);
   --accent: #7dd6f5;
   --accent-600: #3bafd4;
-  --glass: rgba(125,214,245,0.03);
-  --elev-1: 0 6px 18px rgba(0,0,0,0.6);
-  --radius-lg: 18px;
+  --radius-lg: 10px;
 }
 
 [data-theme="light"] {
-  --bg: #e8f3f9;
-  --muted: #4d7a96;
-  --text: #0c1d2b;
-  --card: #f4fafd;
-  --accent: #2196c4;
-  --accent-600: #1074a0;
-  --glass: rgba(33,150,196,0.06);
-  --elev-1: 0 4px 20px rgba(16,116,160,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  --bg: #fafafa;
+  --muted: #6b7280;
+  --text: #111111;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --accent: #0ea5e9;
+  --accent-600: #0284c7;
 }
 
 @layer base {
   html {
-    background: radial-gradient(circle at top, rgba(125,214,245,0.10), transparent 30%), var(--bg);
-    transition: background 220ms ease, color 220ms ease;
+    background: var(--bg);
   }
 
   body {
     min-height: 100vh;
     color: var(--text);
     background-color: var(--bg);
-    font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-    background-image:
-      radial-gradient(circle at top left, rgba(125,214,245,0.09), transparent 28%),
-      radial-gradient(circle at 80% 15%, rgba(59,175,212,0.05), transparent 24%),
-      linear-gradient(180deg, rgba(125,214,245,0.02), transparent 20%);
+    font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 220ms ease, color 220ms ease;
-  }
-
-  [data-theme="light"] body {
-    background-color: var(--bg);
-    background-image:
-      radial-gradient(ellipse at top left, rgba(125,214,245,0.30) 0%, rgba(186,232,248,0.18) 25%, transparent 55%),
-      radial-gradient(ellipse at 85% 10%, rgba(33,150,196,0.14), transparent 35%),
-      radial-gradient(ellipse at 50% 100%, rgba(200,235,248,0.25), transparent 50%),
-      linear-gradient(180deg, #e8f3f9 0%, #daeef8 40%, #eaf5fb 100%);
-  }
-
-  * {
-    border-color: rgba(125,214,245,0.06);
-  }
-
-  [data-theme="light"] * {
-    border-color: rgba(33,150,196,0.14);
-  }
-
-  ::selection {
-    background: rgba(125,214,245,0.18);
-    color: #fff;
-  }
-
-  [data-theme="light"] ::selection {
-    background: rgba(33,150,196,0.22);
-    color: #0c1d2b;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-syne), var(--font-inter), system-ui, sans-serif;
+    font-family: var(--font-jakarta), system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 
-  a {
-    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  * {
+    border-color: var(--border);
   }
 
-  button {
-    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  ::selection {
+    background: rgba(125,214,245,0.2);
+    color: var(--text);
   }
 
-  .bg-app {
-    background-image: linear-gradient(180deg, rgba(125,214,245,0.03), transparent 40%);
+  a, button {
+    transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
   .card {
-    background: linear-gradient(180deg, rgba(125,214,245,0.02), var(--card));
+    background: var(--card);
     border-radius: var(--radius-lg);
-    box-shadow: var(--elev-1);
+    border: 1px solid var(--border);
   }
 
-  [data-theme="light"] .card {
-    background: linear-gradient(160deg, #ffffff 0%, #eef7fc 100%);
-    border: 1px solid rgba(33,150,196,0.13);
-    box-shadow: 0 2px 12px rgba(16,116,160,0.08), 0 1px 3px rgba(0,0,0,0.05);
-  }
-
-  :root {
-    --container-padding: 1.5rem;
-  }
-
-  .container { max-width: 1100px; margin-left: auto; margin-right: auto; padding-left: var(--container-padding); padding-right: var(--container-padding); }
-
+  /* utility overrides */
   .text-white { color: var(--text) !important; }
   .text-textSecondary { color: var(--muted) !important; }
-  .bg-white\/5 { background-color: rgba(125,214,245,0.03) !important; }
+  .bg-white\/5 { background-color: rgba(255,255,255,0.04) !important; }
   .bg-black\/30 { background-color: rgba(0,0,0,0.3) !important; }
-  .bg-white\/6 { background-color: rgba(125,214,245,0.04) !important; }
+  .bg-white\/6 { background-color: rgba(255,255,255,0.05) !important; }
   .bg-accent\/8 { background-color: rgba(125,214,245,0.08) !important; }
-  .border-white\/10 { border-color: rgba(125,214,245,0.08) !important; }
-  .border-white\/15 { border-color: rgba(125,214,245,0.10) !important; }
+  .border-white\/10 { border-color: var(--border) !important; }
+  .border-white\/15 { border-color: var(--border) !important; }
 
-  [data-theme="light"] .bg-white\/5 { background-color: rgba(33,150,196,0.06) !important; }
-  [data-theme="light"] .bg-black\/30 { background-color: rgba(230,244,251,0.75) !important; }
-  [data-theme="light"] .bg-white\/6 { background-color: rgba(33,150,196,0.06) !important; }
-  [data-theme="light"] .bg-accent\/8 { background-color: rgba(33,150,196,0.10) !important; }
-  [data-theme="light"] .border-white\/10 { border-color: rgba(33,150,196,0.15) !important; }
-  [data-theme="light"] .border-white\/15 { border-color: rgba(33,150,196,0.20) !important; }
+  [data-theme="light"] .bg-white\/5 { background-color: rgba(0,0,0,0.03) !important; }
+  [data-theme="light"] .bg-black\/30 { background-color: rgba(0,0,0,0.04) !important; }
+  [data-theme="light"] .bg-white\/6 { background-color: rgba(0,0,0,0.03) !important; }
+  [data-theme="light"] .bg-accent\/8 { background-color: rgba(14,165,233,0.08) !important; }
+  [data-theme="light"] .border-white\/10 { border-color: var(--border) !important; }
+  [data-theme="light"] .border-white\/15 { border-color: var(--border) !important; }
 }

@@ -1,11 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter, Syne } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import Header from '../components/ui/Header'
 import Footer from '../components/ui/Footer'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const syne = Syne({ subsets: ['latin'], variable: '--font-syne' })
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' })
 
 export const metadata: Metadata = {
   title: 'Arclat — AI Agent Latency Optimizer',
@@ -21,7 +20,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${inter.variable} ${syne.variable} font-body min-h-screen flex flex-col antialiased bg-app`}
+        className={`${jakarta.variable} font-body min-h-screen flex flex-col antialiased`}
       >
         <div className="flex min-h-screen flex-col">
           <Header />

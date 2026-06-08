@@ -217,3 +217,5 @@ frontend/.next/
 frontend/next-env.d.ts
 frontend/.env.local
 frontend/.env*.local
+
+samples/

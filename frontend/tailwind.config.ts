@@ -18,8 +18,8 @@ const config: Config = {
         warning: '#FFAA00'
       },
       fontFamily: {
-        heading: ['var(--font-syne)'],
-        body: ['var(--font-inter)'],
+        heading: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
       }
     },
   },

@@ -1,154 +1,142 @@
 import Link from 'next/link'
-import { Zap, BarChart3, Wrench } from 'lucide-react'
+import { Zap, Code2, Terminal } from 'lucide-react'
 
-const featureIcons = [Zap, BarChart3, Wrench]
+const featureIcons = [Terminal, Code2, Zap]
+
+const MCP_SNIPPET = `{
+  "mcpServers": {
+    "arclat": {
+      "command": "uvx",
+      "args": ["arclat-mcp"],
+      "env": {
+        "ARCLAT_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}`
 
 export default function Home() {
   return (
-    <main className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-[-10rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-accent/15 blur-3xl" />
-        <div className="absolute right-[-10rem] top-32 h-[24rem] w-[24rem] rounded-full bg-white/6 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.7)_1px,transparent_1px)] [background-size:64px_64px]" />
-      </div>
+    <main>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-14 sm:px-10 lg:px-12 lg:py-20">
 
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-12 px-6 py-10 sm:px-10 lg:px-12 lg:py-14">
-        <section className="grid items-center gap-12 pt-4 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:pt-10">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-accent">
-              <span className="h-2 w-2 rounded-full bg-accent" />
-              Find latency you can actually remove
+        {/* Hero */}
+        <section className="grid items-start gap-12 lg:grid-cols-[1fr_0.9fr] lg:gap-16">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium uppercase tracking-widest text-[var(--muted)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+              MCP · Claude Code
             </div>
-            <h1 className="mt-6 font-heading text-5xl font-semibold leading-[0.94] tracking-tight text-[var(--text)] sm:text-6xl lg:text-7xl">
-              Your AI agent is slow.
-              <span className="block text-accent">Here is where the time goes.</span>
+
+            <h1 className="mt-7 text-5xl font-semibold leading-[1.05] tracking-tight text-[var(--text)] sm:text-6xl">
+              Arclat audits your agent codebase for latency issues —
+              <br />
+              <span className="text-[var(--accent)]">from inside Claude Code.</span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-textSecondary sm:text-xl">
-              Arclat audits your agent pipeline, ranks bottlenecks by impact, and gives concrete fixes instead of vague advice.
+
+            <p className="mt-5 text-base leading-7 text-[var(--muted)]">
+              No log files. No context switching. Arclat reads your actual code, ranks bottlenecks by impact, and applies fixes — all from a single Claude Code conversation.
             </p>
 
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link href="/upload" className="inline-flex items-center justify-center rounded-full bg-accent px-6 py-3 text-base font-semibold text-[#06111a] transition-transform hover:-translate-y-0.5">
-                Audit your pipeline
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/auth/register"
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[#06111a] hover:opacity-90"
+              >
+                Install free
               </Link>
-              <Link href="/dashboard" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-base font-semibold text-[var(--text)] backdrop-blur-sm transition-colors hover:bg-white/10">
-                See sample report
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center justify-center rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-[var(--text)] hover:bg-white/5"
+              >
+                View dashboard
               </Link>
             </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-                <div className="text-2xl font-heading font-semibold text-[var(--text)]">1 file</div>
-                <p className="mt-1 text-sm text-textSecondary">Upload logs or describe the pipeline.</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-                <div className="text-2xl font-heading font-semibold text-[var(--text)]">Ranked</div>
-                <p className="mt-1 text-sm text-textSecondary">Time lost sorted by impact, not guesswork.</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-                <div className="text-2xl font-heading font-semibold text-[var(--text)]">Actionable</div>
-                <p className="mt-1 text-sm text-textSecondary">Before/after changes you can ship quickly.</p>
-              </div>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {[
+                { value: '1 line', label: "Add to Claude Code config and you're running." },
+                { value: 'Ranked', label: 'Bottlenecks sorted by time lost, not guesswork.' },
+                { value: 'Auto-fix', label: 'Apply patches directly from Claude Code.' },
+              ].map((item) => (
+                <div key={item.value} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <div className="text-xl font-semibold text-[var(--text)]">{item.value}</div>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{item.label}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-x-8 top-8 h-44 rounded-full bg-accent/15 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0e1116]/92 p-5 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6">
-              <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-textSecondary">Latency map</p>
-                  <p className="mt-2 text-2xl font-semibold text-[var(--text)]">Pipeline audit snapshot</p>
-                </div>
-                <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-                  4 bottlenecks
-                </span>
+          {/* Install snippet card */}
+          <div className="rounded-xl border border-white/10 bg-[var(--card)] p-5">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">One-line install</p>
+                <p className="mt-1.5 text-lg font-semibold text-[var(--text)]">Add to Claude Code config</p>
               </div>
+              <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+                ~/.claude/config
+              </span>
+            </div>
 
-              <div className="mt-5 space-y-4">
-                {[
-                  { label: 'Tool call serialization', value: '640 ms', percent: '92%' },
-                  { label: 'DB round-trips', value: '310 ms', percent: '58%' },
-                  { label: 'Cold start + prefetch', value: '180 ms', percent: '31%' },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <span className="font-medium text-[var(--text)]">{item.label}</span>
-                      <span className="text-textSecondary">{item.value}</span>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-gradient-to-r from-accent via-accent to-white/70" style={{ width: item.percent }} />
-                    </div>
-                  </div>
-                ))}
+            <pre className="mt-4 overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-4 text-xs leading-6 text-[var(--text)]">
+              <code>{MCP_SNIPPET}</code>
+            </pre>
+
+            <div className="mt-4 rounded-lg border border-white/10 bg-[var(--accent)]/5 p-3.5">
+              <p className="text-sm text-[var(--muted)]">Then say in Claude Code:</p>
+              <p className="mt-1 text-sm font-medium text-[var(--text)]">&ldquo;Audit this codebase for latency issues&rdquo;</p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-white/10 p-3.5">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Free tier</p>
+                <p className="mt-1.5 text-sm leading-6 text-[var(--text)]">20 audits/month. Findings included. No credit card.</p>
               </div>
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-textSecondary">Recommendation</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text)]">Batch sequential tool calls and hoist repeated context fetches.</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-textSecondary">Expected gain</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text)]">Reduce response time by roughly 28% on this path.</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-accent/15 bg-accent/8 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-textSecondary">Projected lift</p>
-                    <p className="mt-1 text-base font-semibold text-[var(--text)]">Most time is lost before the model even responds.</p>
-                  </div>
-                  <div className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-                    -28%
-                  </div>
-                </div>
+              <div className="rounded-lg border border-white/10 p-3.5">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Pro — $19/mo</p>
+                <p className="mt-1.5 text-sm leading-6 text-[var(--text)]">Unlimited audits + apply_fix tool + CI/CD GitHub Action.</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
+        {/* Features */}
+        <section className="grid gap-4 lg:grid-cols-3">
           {[
-            {
-              title: 'Instant audit',
-              description: 'Upload logs or describe your pipeline. No integration required to get a first pass.',
-            },
-            {
-              title: 'Ranked bottlenecks',
-              description: 'Every issue is sorted by time lost so the highest-value fix is obvious immediately.',
-            },
-            {
-              title: 'Specific fixes',
-              description: 'You get concrete changes, not generic performance slogans or vague tuning advice.',
-            },
+            { title: 'Works inside Claude Code', description: 'No browser tab, no upload flow. Arclat lives in your existing workflow as an MCP server.' },
+            { title: 'Reads your actual code', description: 'AST-based analysis on your .py files. Not logs, not guesses — the real source of truth.' },
+            { title: 'One-line install', description: "Add the MCP config snippet, get your API key, and you're auditing in under 60 seconds." },
           ].map((feature, i) => {
             const Icon = featureIcons[i]
             return (
-              <article key={feature.title} className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-transform hover:-translate-y-1">
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/20 to-white/5">
-                  <Icon size={20} className="text-accent" />
+              <article key={feature.title} className="rounded-xl border border-white/10 p-5 hover:bg-white/5 transition-colors">
+                <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10">
+                  <Icon size={16} className="text-[var(--accent)]" />
                 </div>
-                <h2 className="font-heading text-xl font-semibold text-[var(--text)]">{feature.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-textSecondary">{feature.description}</p>
+                <h2 className="text-base font-semibold text-[var(--text)]">{feature.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{feature.description}</p>
               </article>
             )
           })}
         </section>
 
-        <section className="grid gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl sm:grid-cols-3 sm:p-8">
+        {/* Pricing */}
+        <section className="grid gap-4 rounded-xl border border-white/10 p-6 sm:grid-cols-4">
           {[
-            ['32%', 'average latency removed'],
-            ['4 signals', 'tracked across each audit'],
-            ['1-click', 'shareable report output'],
-          ].map(([value, label]) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-black/20 p-5">
-              <p className="font-heading text-3xl font-semibold text-[var(--text)]">{value}</p>
-              <p className="mt-2 text-sm text-textSecondary">{label}</p>
+            ['Free', '$0', '20 audits/month'],
+            ['Pro', '$19/mo', 'Unlimited + apply_fix'],
+            ['Team', '$49/mo', '5 seats + GitHub Action'],
+            ['Enterprise', '$200+/mo', 'Custom + Slack + support'],
+          ].map(([tier, price, desc]) => (
+            <div key={tier} className="border-r border-white/10 last:border-r-0 pr-6 last:pr-0">
+              <p className="text-xs uppercase tracking-widest text-[var(--muted)]">{tier}</p>
+              <p className="mt-1.5 text-2xl font-semibold tracking-tight text-[var(--text)]">{price}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">{desc}</p>
             </div>
           ))}
         </section>
+
       </div>
     </main>
   )

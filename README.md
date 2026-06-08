@@ -1,50 +1,77 @@
-# Arclat — AI Agent Latency Optimizer
+# Arclat — AI Agent Latency Auditor
 
-## What is Arclat
-Arclat audits your AI agent pipeline, finds exactly where you're losing time, and tells you how to fix it — in minutes, not weeks. You submit your agent's logs (JSON format) and Arclat detects latency bottlenecks, ranks them by impact, and provides specific fix recommendations with before/after code examples.
+Arclat is an MCP server that plugs into Claude Code and audits your AI agent codebase for latency bottlenecks. It reads your actual source code, ranks issues by impact, and can apply fixes directly from Claude Code.
 
-## Tech Stack
-* **Backend:** Python 3.11, FastAPI, Celery, Redis, SQLAlchemy 2.0
-* **Frontend:** Next.js 14, Tailwind CSS, TypeScript
-* **Database:** PostgreSQL (via Supabase)
+## Install Arclat
 
-## Local Setup
+1. Get your free API key at [arclat.com](https://arclat.com)
+2. Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repo-url> arclat
-   cd arclat
-   ```
-
-2. **Setup environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your local or Supabase credentials if necessary
-   ```
-
-3. **Start backend, database, and redis via Docker Compose:**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Run Database Migrations (Run inside backend or against the exposed DB port):**
-   ```bash
-   alembic upgrade head
-   ```
-
-5. **Start frontend application:**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-## Running Tests
-To test the custom latency bottleneck detectors:
-```bash
-cd backend
-pytest tests/
+```json
+{
+  "mcpServers": {
+    "arclat": {
+      "command": "uvx",
+      "args": ["arclat-mcp"],
+      "env": {
+        "ARCLAT_API_KEY": "your_key_here"
+      }
+    }
+  }
+}
 ```
 
-## Built By
-Stravon
+3. In Claude Code, say: `"Audit this codebase for latency issues"`
+4. Done.
+
+## Usage limits
+
+| Plan       | Price     | Limits                                      |
+|------------|-----------|---------------------------------------------|
+| Free       | $0        | 20 audits/month, findings only              |
+| Pro        | $19/mo    | Unlimited audits + apply_fix tool           |
+| Team       | $49/mo    | 5 seats + CI/CD GitHub Action               |
+| Enterprise | $200+/mo  | Custom limits + Slack integration + support |
+
+## MCP Tools
+
+| Tool              | Description                                              |
+|-------------------|----------------------------------------------------------|
+| `audit_codebase`  | Reads Python files in a directory, returns ranked findings |
+| `get_findings`    | Filters findings from last audit by severity or type     |
+| `apply_fix`       | Applies a fix to a file (dry_run=true by default)        |
+
+## What it detects
+
+- **SyncOutput** — LLM calls missing streaming (`stream=True`)
+- **SequentialTools** — independent tool calls that should use `asyncio.gather()`
+- **CacheMiss** — repeated identical LLM calls with no caching
+- **BlockingIO** — sync `requests.get` / DB calls blocking the event loop
+- **ColdStart** — expensive init/setup functions running per-request
+- **Prefetch** — predictable tool-call pairs that could be started speculatively
+
+## Repository structure
+
+```
+arclat/
+├── mcp_server/          # MCP server (ships as arclat-mcp on PyPI)
+│   ├── server.py        # entry point, exposes 3 MCP tools
+│   ├── engine/          # audit engine (detectors, scorer, code_parser)
+│   └── usage/           # SQLite-based usage tracker
+├── api/ (backend/)      # lightweight FastAPI — auth + billing only
+├── frontend/            # Next.js 14 landing page + dashboard
+└── pyproject.toml       # package config for uvx/pip install
+```
+
+## Development
+
+```bash
+# Install MCP server in editable mode
+pip install -e ".[dev]"
+
+# Run FastAPI backend
+cd backend && uvicorn app.main:app --reload
+
+# Run Next.js frontend
+cd frontend && npm run dev
+```

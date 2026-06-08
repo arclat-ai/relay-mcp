@@ -51,55 +51,52 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/30 backdrop-blur-2xl">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 sm:px-10 lg:px-12">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(125,214,245,0.28)]" style={{background: 'linear-gradient(135deg, var(--accent-600), #1a6e8a)'}}>A</div>
-          <div>
-            <div className="font-heading text-lg font-semibold tracking-tight">Arclat</div>
-            <div className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">AI latency optimizer</div>
-          </div>
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[var(--bg)]">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3.5 sm:px-10 lg:px-12">
+        <Link href="/" className="flex items-center gap-2.5">
+          <img src="/logo.svg" alt="Arclat" className="h-8 w-8 rounded-lg" />
+          <span className="text-base font-semibold tracking-tight text-[var(--text)]">Arclat</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 text-sm text-[var(--muted)] md:flex">
-          <Link href="/dashboard" className="flex items-center gap-1.5 rounded-full px-4 py-2 hover:bg-white/5 hover:text-[var(--text)]">
+        <nav className="hidden items-center gap-0.5 text-sm text-[var(--muted)] md:flex">
+          <Link href="/dashboard" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
             <LayoutDashboard size={14} />
             Dashboard
           </Link>
-          <Link href="/upload" className="flex items-center gap-1.5 rounded-full px-4 py-2 hover:bg-white/5 hover:text-[var(--text)]">
+          <Link href="/upload" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
             <Upload size={14} />
             Upload
           </Link>
-          <Link href="/share" className="flex items-center gap-1.5 rounded-full px-4 py-2 hover:bg-white/5 hover:text-[var(--text)]">
+          <Link href="/share" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
             <FileText size={14} />
             Reports
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="flex items-center justify-center rounded-full border border-white/10 p-2 text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)] transition-colors"
+            className="flex items-center justify-center rounded-lg border border-white/10 p-2 text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]"
           >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
           {authed ? (
             <div ref={menuRef} className="relative">
               <button
                 onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)] transition-colors"
+                className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]"
               >
-                <UserCircle size={18} />
-                <ChevronDown size={13} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+                <UserCircle size={16} />
+                <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 mt-2 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#0e1116] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                <div className="absolute right-0 mt-1.5 w-36 overflow-hidden rounded-xl border border-white/10 bg-[var(--card)] shadow-xl">
                   <button
                     onClick={signOut}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)] transition-colors"
+                    className="flex w-full items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]"
                   >
-                    <LogOut size={14} />
+                    <LogOut size={13} />
                     Sign out
                   </button>
                 </div>
@@ -107,8 +104,8 @@ export default function Header() {
             </div>
           ) : (
             <>
-              <Link href="/auth/login" className="rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]">Sign in</Link>
-              <Link href="/auth/register" className="rounded-full px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(125,214,245,0.22)]" style={{background: 'linear-gradient(90deg, var(--accent-600), #1a6e8a)'}}>Get started</Link>
+              <Link href="/auth/login" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-[var(--muted)] hover:bg-white/5 hover:text-[var(--text)]">Sign in</Link>
+              <Link href="/auth/register" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06111a] hover:opacity-90">Get started</Link>
             </>
           )}
         </div>

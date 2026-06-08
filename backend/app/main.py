@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, pipelines, audits, users
+from app.routers import auth
 from app.config import settings
 
 app = FastAPI(title="Arclat API")
@@ -14,9 +14,6 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(pipelines.router)
-app.include_router(audits.router)
-app.include_router(users.router)
 
 @app.get("/")
 def health_check():
