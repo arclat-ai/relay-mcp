@@ -77,7 +77,14 @@ Usage data is stored locally at `~/.arclat/usage.db` (SQLite) and synced to the 
 ### Requirements
 
 - Python 3.11+
-- PostgreSQL via Supabase (set env vars in `.env`)
+- A Supabase project (free tier is fine)
+
+### First-time: create the database tables
+
+1. Open your Supabase project → **SQL Editor → New query**
+2. Paste and run the contents of `supabase_schema.sql` (repo root)
+
+That creates the `users` and `usage` tables with RLS policies.
 
 ### Setup
 

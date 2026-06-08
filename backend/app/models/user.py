@@ -11,4 +11,5 @@ class User(Base):
     name = Column(String, nullable=True)
     company = Column(String, nullable=True)
     plan = Column(String, default="free")
+    api_key = Column(String, unique=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
