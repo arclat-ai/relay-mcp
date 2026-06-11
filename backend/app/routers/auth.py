@@ -41,17 +41,20 @@ def _current_month() -> str:
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(body: RegisterRequest):
-    sb_anon = anon_client()
     sb_admin = admin_client()
 
-    # 1. Create Supabase auth user
+    # 1. Create Supabase auth user via admin client (synchronous, immediately committed)
     try:
-        auth_resp = sb_anon.auth.sign_up({"email": body.email, "password": body.password})
+        auth_resp = sb_admin.auth.admin.create_user({
+            "email": body.email,
+            "password": body.password,
+            "email_confirm": True,
+        })
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     if auth_resp.user is None:
-        raise HTTPException(status_code=400, detail="Registration failed — check your email for a confirmation link.")
+        raise HTTPException(status_code=400, detail="Registration failed.")
 
     user_id = auth_resp.user.id
     api_key = _generate_api_key()
