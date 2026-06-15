@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, Upload, FileText, UserCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, FileText, UserCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react'
 
 export default function Header() {
   const [authed, setAuthed] = useState(false)
@@ -62,10 +62,6 @@ export default function Header() {
           <Link href="/dashboard" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
             <LayoutDashboard size={14} />
             Dashboard
-          </Link>
-          <Link href="/upload" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
-            <Upload size={14} />
-            Upload
           </Link>
           <Link href="/share" className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-[var(--text)]">
             <FileText size={14} />
