@@ -2,6 +2,7 @@ import secrets
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
+from postgrest.exceptions import APIError
 from app.dependencies import anon_client, admin_client, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -95,9 +96,10 @@ def login(body: LoginRequest):
     user_id = auth_resp.user.id
 
     # 2. Fetch api_key from users table
-    result = sb_admin.table("users").select("api_key, plan").eq("id", user_id).single().execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="User record not found")
+    try:
+        result = sb_admin.table("users").select("api_key, plan").eq("id", user_id).single().execute()
+    except APIError:
+        raise HTTPException(status_code=404, detail="User profile not found. Please re-register.")
 
     return {
         "api_key": result.data["api_key"],
