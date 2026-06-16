@@ -95,11 +95,18 @@ def login(body: LoginRequest):
 
     user_id = auth_resp.user.id
 
-    # 2. Fetch api_key from users table
+    # 2. Fetch api_key from users table, backfill if row is missing (orphaned auth accounts)
     try:
         result = sb_admin.table("users").select("api_key, plan").eq("id", user_id).single().execute()
     except APIError:
-        raise HTTPException(status_code=404, detail="User profile not found. Please re-register.")
+        api_key = _generate_api_key()
+        sb_admin.table("users").insert({
+            "id": user_id,
+            "email": body.email,
+            "plan": "free",
+            "api_key": api_key,
+        }).execute()
+        result = sb_admin.table("users").select("api_key, plan").eq("id", user_id).single().execute()
 
     return {
         "api_key": result.data["api_key"],
