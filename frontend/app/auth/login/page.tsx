@@ -32,8 +32,8 @@ export default function LoginPage() {
         setError(data.detail ?? 'Login failed. Check your credentials.')
         return
       }
-      localStorage.setItem('token', data.token)
-      setAuthCookie(data.token)
+      localStorage.setItem('token', data.access_token)
+      setAuthCookie(data.access_token)
       router.push('/dashboard')
     } catch {
       setError('Unable to reach the server. Try again.')
