@@ -129,23 +129,36 @@ export default function Dashboard() {
         </section>
 
         {/* Getting started */}
-        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <p className="text-xs uppercase tracking-[0.3em] text-accent mb-3">Get Started</p>
-          <ol className="space-y-3 text-sm text-textSecondary list-none">
-            <li className="flex gap-3">
-              <span className="shrink-0 text-accent font-semibold">1.</span>
-              Install the MCP server:
-              <code className="ml-1 text-white">npx arclat-mcp</code>
+        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl sm:col-span-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-accent mb-4">How to use your API key</p>
+          <ol className="space-y-5 text-sm text-textSecondary">
+            <li>
+              <span className="text-white font-semibold">1. Add Arclat to Claude Code</span>
+              <p className="mt-1">Open <code className="text-accent">~/.claude/claude_code_config.json</code> and add:</p>
+              <pre className="mt-2 rounded-xl border border-white/10 bg-black/40 p-4 text-xs text-white overflow-x-auto">{`{
+  "mcpServers": {
+    "arclat": {
+      "command": "uvx",
+      "args": ["arclat-mcp"],
+      "env": {
+        "ARCLAT_API_KEY": "${profile.api_key}"
+      }
+    }
+  }
+}`}</pre>
             </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 text-accent font-semibold">2.</span>
-              Set your key: <code className="ml-1 text-white">ARCLAT_API_KEY=arc_…</code>
+            <li>
+              <span className="text-white font-semibold">2. Open any AI agent project in Claude Code</span>
+              <p className="mt-1">Works with any Python codebase using LangChain, LlamaIndex, CrewAI, OpenAI, or Anthropic SDKs.</p>
             </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 text-accent font-semibold">3.</span>
-              Run an audit from your IDE or CLI.
+            <li>
+              <span className="text-white font-semibold">3. Ask Claude to audit it</span>
+              <p className="mt-1">Type in Claude Code:</p>
+              <pre className="mt-2 rounded-xl border border-white/10 bg-black/40 p-4 text-xs text-white">{`Audit this codebase for latency issues`}</pre>
+              <p className="mt-2">Claude will call the Arclat MCP tool, read your code, and return ranked bottlenecks with fix recommendations.</p>
             </li>
           </ol>
+          <p className="mt-5 text-xs text-textSecondary">Free plan: 20 audits/month &nbsp;·&nbsp; <a href="mailto:abdur@lythe.ai" className="text-accent hover:underline">Contact us to upgrade</a></p>
         </section>
 
       </div>

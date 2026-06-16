@@ -1,274 +1,154 @@
-"""Arclat MCP Server — exposes audit_codebase, get_findings, apply_fix."""
-
-import difflib
-import sys
+﻿"""
+Arclat MCP Server
+Run via: uvx arclat-mcp  (or: python -m mcp_server.server)
+"""
+import os
 from dataclasses import asdict
-from pathlib import Path
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.server.fastmcp import FastMCP
 
-from mcp_server.engine.engine import AuditEngine, AuditResult
-from mcp_server.usage.tracker import UsageTracker
+from mcp_server.engine.engine import AuditEngine
+from mcp_server.usage.tracker import validate_and_check, increment
 
-server = Server("arclat")
-tracker = UsageTracker()
+mcp = FastMCP("arclat")
 
-# In-memory cache of last audit result (per server session)
-_last_result: AuditResult | None = None
-_last_directory: str | None = None
+# In-memory cache of last audit result for get_findings
+_last_result = None
 
 
-# ── Tool definitions ────────────────────────────────────────────────────────
-
-@server.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="audit_codebase",
-            description=(
-                "Audits an AI agent codebase for latency bottlenecks. "
-                "Reads Python files in the given directory and returns ranked findings."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "directory": {
-                        "type": "string",
-                        "description": "Absolute path to the codebase directory to audit.",
-                    },
-                    "api_key": {
-                        "type": "string",
-                        "description": "Arclat API key for usage tracking.",
-                    },
-                },
-                "required": ["directory", "api_key"],
-            },
-        ),
-        Tool(
-            name="get_findings",
-            description=(
-                "Returns findings from the last audit, optionally filtered by severity or type."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "severity": {
-                        "type": "string",
-                        "enum": ["high", "medium", "low"],
-                        "description": "Filter findings by severity.",
-                    },
-                    "finding_type": {
-                        "type": "string",
-                        "description": "Filter by bottleneck type (e.g. sequential_tools, sync_output).",
-                    },
-                },
-                "required": [],
-            },
-        ),
-        Tool(
-            name="apply_fix",
-            description=(
-                "Applies a fix recommendation to the codebase file. "
-                "Defaults to dry_run=true — shows a diff without changing any files."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Path to the file to modify.",
-                    },
-                    "finding_id": {
-                        "type": "string",
-                        "description": "Rank of the finding to fix (1-based integer as string).",
-                    },
-                    "dry_run": {
-                        "type": "boolean",
-                        "description": "If true (default), show diff without applying.",
-                        "default": True,
-                    },
-                },
-                "required": ["file_path", "finding_id"],
-            },
-        ),
-    ]
+def _severity_icon(s: str) -> str:
+    return {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(s.lower(), "⚪")
 
 
-# ── Tool handlers ───────────────────────────────────────────────────────────
+def _format_findings(bottlenecks: list) -> str:
+    if not bottlenecks:
+        return "No bottlenecks detected."
+    lines = []
+    for f in bottlenecks:
+        icon = _severity_icon(f["severity"])
+        lines.append(f"\n### {icon} [{f['rank']}] {f['title']}")
+        lines.append(f"**Location:** {f['location']}")
+        lines.append(f"**Severity:** {f['severity'].upper()}  |  **Time lost:** ~{f['time_lost_ms']}ms")
+        lines.append(f"**Fix effort:** {f['effort']}  |  **Impact:** {f['impact']}")
+        lines.append(f"\n{f['description']}")
+        if f.get("code_before") and f.get("code_after"):
+            lines.append(f"\n**Before:**\n```python\n{f['code_before']}\n```")
+            lines.append(f"**After:**\n```python\n{f['code_after']}\n```")
+    return "\n".join(lines)
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    if name == "audit_codebase":
-        return await _audit_codebase(arguments)
-    if name == "get_findings":
-        return await _get_findings(arguments)
-    if name == "apply_fix":
-        return await _apply_fix(arguments)
-    return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
+@mcp.tool()
+def audit_codebase(directory: str, api_key: str = "") -> str:
+    """
+    Audit an AI agent codebase for latency bottlenecks.
+    Reads Python files in the given directory and returns ranked findings with fix recommendations.
 
-async def _audit_codebase(args: dict) -> list[TextContent]:
-    global _last_result, _last_directory
+    Args:
+        directory: Absolute path to the codebase directory to audit.
+        api_key: Your Arclat API key (arc_...). Get one at https://arclat.vercel.app
+    """
+    global _last_result
 
-    directory = args.get("directory", "")
-    api_key = args.get("api_key", "")
+    # Fall back to env var if not passed directly
+    key = api_key or os.getenv("ARCLAT_API_KEY", "")
 
-    if not Path(directory).is_dir():
-        return [TextContent(type="text", text=f"❌ Directory not found: {directory}")]
+    allowed, reason = validate_and_check(key)
+    if not allowed:
+        return f"❌ {reason}"
 
-    user = tracker.validate_key(api_key)
-    if user is None:
-        return [TextContent(type="text", text="❌ Invalid API key. Get one free at arclat.com")]
-
-    if not tracker.check_limit(api_key):
-        usage = tracker.get_usage(api_key)
-        return [TextContent(type="text", text=(
-            f"❌ Monthly audit limit reached ({usage['count']}/{usage['limit']} audits used). "
-            f"Resets {usage['resets_at'][:10]}. Upgrade to Pro at arclat.com for unlimited audits."
-        ))]
-
-    engine = AuditEngine()
-    result = engine.run_on_codebase(directory)
-    tracker.increment(api_key)
-
+    result = AuditEngine().run_on_codebase(directory)
     _last_result = result
-    _last_directory = directory
 
-    return [TextContent(type="text", text=_format_audit_report(result, directory))]
+    increment(key)
 
+    summary = result.summary
+    bottlenecks = result.to_dict()["bottlenecks"]
 
-async def _get_findings(args: dict) -> list[TextContent]:
-    if _last_result is None:
-        return [TextContent(type="text", text="No audit has been run yet. Use audit_codebase first.")]
-
-    findings = _last_result.bottlenecks
-    severity_filter = args.get("severity")
-    type_filter = args.get("finding_type")
-
-    if severity_filter:
-        findings = [f for f in findings if f.severity.lower() == severity_filter.lower()]
-    if type_filter:
-        findings = [f for f in findings if f.type.lower() == type_filter.lower()]
-
-    if not findings:
-        return [TextContent(type="text", text="No findings match the given filters.")]
-
-    lines = [f"## Filtered Findings ({len(findings)} total)\n"]
-    for f in findings:
-        lines.append(_format_finding(f))
-
-    return [TextContent(type="text", text="\n".join(lines))]
-
-
-async def _apply_fix(args: dict) -> list[TextContent]:
-    if _last_result is None:
-        return [TextContent(type="text", text="No audit has been run yet. Use audit_codebase first.")]
-
-    file_path = args.get("file_path", "")
-    finding_id = args.get("finding_id", "")
-    dry_run = args.get("dry_run", True)
-
-    try:
-        rank = int(finding_id)
-    except (ValueError, TypeError):
-        return [TextContent(type="text", text="finding_id must be the rank number (e.g. '1')")]
-
-    finding = next((f for f in _last_result.bottlenecks if f.rank == rank), None)
-    if finding is None:
-        return [TextContent(type="text", text=f"No finding with rank {rank} found.")]
-
-    if not finding.code_before or not finding.code_after:
-        return [TextContent(type="text", text=(
-            f"Finding '{finding.title}' does not have an automated fix available. "
-            f"Apply manually: {finding.description}"
-        ))]
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as fh:
-            original = fh.read()
-    except OSError as e:
-        return [TextContent(type="text", text=f"Cannot read file: {e}")]
-
-    if finding.code_before not in original:
-        return [TextContent(type="text", text=(
-            f"Could not find the exact pattern to replace in {file_path}.\n"
-            f"Apply manually:\n\n**Before:**\n```python\n{finding.code_before}\n```\n\n"
-            f"**After:**\n```python\n{finding.code_after}\n```"
-        ))]
-
-    fixed = original.replace(finding.code_before, finding.code_after, 1)
-
-    diff_lines = list(difflib.unified_diff(
-        original.splitlines(keepends=True),
-        fixed.splitlines(keepends=True),
-        fromfile=f"a/{file_path}",
-        tofile=f"b/{file_path}",
-        lineterm="",
-    ))
-    diff_str = "".join(diff_lines)
-
-    if dry_run:
-        return [TextContent(type="text", text=(
-            f"**Dry run** — no files changed.\n\n"
-            f"**Fix:** {finding.title}\n\n"
-            f"```diff\n{diff_str}\n```\n\n"
-            f"Run again with `dry_run: false` to apply."
-        ))]
-
-    with open(file_path, "w", encoding="utf-8") as fh:
-        fh.write(fixed)
-
-    return [TextContent(type="text", text=(
-        f"✅ Applied fix: **{finding.title}**\n\n"
-        f"```diff\n{diff_str}\n```"
-    ))]
-
-
-# ── Formatting helpers ──────────────────────────────────────────────────────
-
-_SEVERITY_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢"}
-
-
-def _format_finding(f) -> str:
-    emoji = _SEVERITY_EMOJI.get(f.severity.lower(), "⚪")
-    lines = [
-        f"### {emoji} [#{f.rank}] {f.title}",
-        f"**Severity:** {f.severity.capitalize()}  |  **Time lost:** ~{f.time_lost_ms}ms  |  **Effort:** {f.effort}",
-        f"**Location:** `{f.location}`",
-        f"**Issue:** {f.description}",
-    ]
-    if f.code_before:
-        lines += [
-            "\n**Before:**",
-            f"```python\n{f.code_before}\n```",
-            "**After:**",
-            f"```python\n{f.code_after}\n```",
-        ]
-    return "\n".join(lines) + "\n"
-
-
-def _format_audit_report(result: AuditResult, directory: str) -> str:
-    s = result.summary
     header = (
         f"## Arclat Audit Report\n"
-        f"**Directory:** `{directory}`\n"
-        f"**{s['total_bottlenecks']} bottleneck(s) found · "
-        f"~{s['estimated_improvement_pct']}% estimated improvement**\n\n"
+        f"**{summary['total_bottlenecks']} bottleneck(s) found · "
+        f"~{summary['estimated_improvement_pct']}% estimated improvement**\n"
+        f"**Top issue:** {summary['top_issue']}\n"
     )
-    if not result.bottlenecks:
-        return header + "✅ No latency bottlenecks detected."
 
-    findings_text = "\n".join(_format_finding(f) for f in result.bottlenecks)
-    return header + findings_text
+    return header + _format_findings(bottlenecks)
 
 
-# ── Entry point ─────────────────────────────────────────────────────────────
+@mcp.tool()
+def get_findings(severity: str = "", finding_type: str = "") -> str:
+    """
+    Return findings from the last audit, optionally filtered.
+
+    Args:
+        severity: Filter by severity — 'high', 'medium', or 'low'. Leave blank for all.
+        finding_type: Filter by type e.g. 'sequential_tools', 'sync_output'. Leave blank for all.
+    """
+    if _last_result is None:
+        return "No audit has been run yet. Call audit_codebase first."
+
+    bottlenecks = _last_result.to_dict()["bottlenecks"]
+    if severity:
+        bottlenecks = [b for b in bottlenecks if b["severity"].lower() == severity.lower()]
+    if finding_type:
+        bottlenecks = [b for b in bottlenecks if b["type"].lower() == finding_type.lower()]
+
+    if not bottlenecks:
+        return "No findings match the given filters."
+    return _format_findings(bottlenecks)
+
+
+@mcp.tool()
+def apply_fix(file_path: str, finding_rank: int, dry_run: bool = True) -> str:
+    """
+    Apply a fix recommendation to a file.
+
+    Args:
+        file_path: Absolute path to the file to modify.
+        finding_rank: Rank number of the finding to fix (from audit_codebase output).
+        dry_run: If True (default), show what would change without writing. Set to False to apply.
+    """
+    if _last_result is None:
+        return "No audit has been run yet. Call audit_codebase first."
+
+    bottlenecks = _last_result.to_dict()["bottlenecks"]
+    match = next((b for b in bottlenecks if b["rank"] == finding_rank), None)
+    if match is None:
+        return f"No finding with rank {finding_rank}. Valid ranks: {[b['rank'] for b in bottlenecks]}"
+
+    before = match.get("code_before", "")
+    after = match.get("code_after", "")
+
+    if not before or not after:
+        return f"Finding '{match['title']}' does not have an automated fix. Apply manually:\n{match['description']}"
+
+    try:
+        source = open(file_path, encoding="utf-8").read()
+    except FileNotFoundError:
+        return f"File not found: {file_path}"
+
+    if before not in source:
+        return (
+            f"Could not locate the exact pattern in {file_path}.\n"
+            f"Apply manually — replace:\n```python\n{before}\n```\nwith:\n```python\n{after}\n```"
+        )
+
+    new_source = source.replace(before, after, 1)
+
+    if dry_run:
+        return (
+            f"**Dry run — no changes written.**\n\n"
+            f"File: `{file_path}`\n\n"
+            f"**Before:**\n```python\n{before}\n```\n\n"
+            f"**After:**\n```python\n{after}\n```\n\n"
+            f"Call with `dry_run=False` to apply."
+        )
+
+    open(file_path, "w", encoding="utf-8").write(new_source)
+    return f"✅ Fix applied to `{file_path}`.\n\nReplaced:\n```python\n{before}\n```\nWith:\n```python\n{after}\n```"
+
 
 def main():
-    import asyncio
-    asyncio.run(stdio_server(server))
+    mcp.run()
 
 
 if __name__ == "__main__":

@@ -1,218 +1,142 @@
+﻿"""
+Parses Python agent codebases using AST analysis.
+Produces Span objects with synthetic timing so the existing detectors work unchanged.
+"""
 import ast
-import os
 import uuid
 from pathlib import Path
-from mcp_server.engine.base_detector import CodeSpan
+from typing import List
 
-SKIP_DIRS = {"venv", ".venv", "__pycache__", ".git", "node_modules", ".pytest_cache"}
+from mcp_server.engine.base_detector import Span
 
-LLM_CALL_ATTRS = {
+_SKIP_DIRS = {"venv", ".venv", "__pycache__", ".git", "node_modules", ".mypy_cache"}
+
+_LLM_METHODS = {
     "completions.create", "messages.create", "generate",
-    "ainvoke", "invoke", "arun", "run", "acomplete", "complete",
+    "ainvoke", "invoke", "arun", "run",
 }
-
-TOOL_PATTERNS = {"@tool", "StructuredTool", "FunctionTool"}
-
-SYNC_HTTP_CALLS = {
-    ("requests", "get"), ("requests", "post"), ("requests", "put"),
-    ("requests", "delete"), ("requests", "patch"),
-    ("httpx", "get"), ("httpx", "post"), ("httpx", "put"),
-    ("httpx", "delete"),
-}
-
-DB_CALL_ATTRS = {
-    "execute", "executemany", "find", "find_one", "insert_one",
-    "insert_many", "update_one", "update_many", "delete_one", "delete_many",
-}
+_TOOL_DECORATORS = {"tool", "StructuredTool", "FunctionTool"}
+_SYNC_HTTP = {"requests.get", "requests.post", "requests.put", "requests.delete",
+              "httpx.get", "httpx.post"}
+_SYNC_DB = {"session.execute", "cursor.execute", "collection.find", "conn.execute"}
+_INIT_KEYWORDS = ("__init__", "setup", "connect", "initialize")
 
 
-def _attr_chain(node) -> str:
-    """Return dotted attribute chain for a node, e.g. 'client.messages.create'."""
-    parts = []
-    while isinstance(node, ast.Attribute):
-        parts.append(node.attr)
-        node = node.value
+def _node_name(node: ast.expr) -> str:
     if isinstance(node, ast.Name):
-        parts.append(node.id)
-    return ".".join(reversed(parts))
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return f"{_node_name(node.value)}.{node.attr}"
+    return ""
+
+
+def _make_span(name: str, span_type: str, cursor_ms: int, duration_ms: int, metadata: dict) -> tuple[Span, int]:
+    span = Span(
+        id=str(uuid.uuid4())[:8],
+        name=name,
+        start_ms=cursor_ms,
+        end_ms=cursor_ms + duration_ms,
+        duration_ms=duration_ms,
+        span_type=span_type,
+        metadata=metadata,
+    )
+    return span, cursor_ms + duration_ms
 
 
 class CodeParser:
-    """Parses Python agent codebases using AST analysis."""
-
-    def parse_directory(self, directory: str) -> list[CodeSpan]:
-        spans = []
-        path = Path(directory)
-        for py_file in path.rglob("*.py"):
-            if any(skip in py_file.parts for skip in SKIP_DIRS):
+    def parse_directory(self, directory: str) -> List[Span]:
+        spans: List[Span] = []
+        cursor_ms = 0
+        for py_file in sorted(Path(directory).rglob("*.py")):
+            if any(part in _SKIP_DIRS for part in py_file.parts):
                 continue
-            spans.extend(self.parse_file(str(py_file)))
+            new_spans, cursor_ms = self._parse_file(str(py_file), cursor_ms)
+            spans.extend(new_spans)
         return spans
 
-    def parse_file(self, file_path: str) -> list[CodeSpan]:
+    def _parse_file(self, file_path: str, cursor_ms: int) -> tuple[List[Span], int]:
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                source = f.read()
-        except OSError:
-            return []
-
-        try:
+            source = Path(file_path).read_text(encoding="utf-8", errors="ignore")
             tree = ast.parse(source)
         except SyntaxError:
-            return []
+            return [], cursor_ms
 
-        return self._extract_spans(tree, source, file_path)
-
-    def _extract_spans(self, tree: ast.AST, source: str, file_path: str) -> list[CodeSpan]:
-        spans = []
-        lines = source.split("\n")
-
-        # Collect decorated functions to detect @tool
-        tool_decorated_lines: set[int] = set()
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for decorator in node.decorator_list:
-                    dname = _attr_chain(decorator)
-                    if dname in ("tool",) or any(p in dname for p in TOOL_PATTERNS):
-                        tool_decorated_lines.add(node.lineno)
+        spans: List[Span] = []
+        rel = file_path
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.Await):
-                span = self._analyze_await(node, lines, file_path)
-                if span:
+            # Detect async LLM calls (await client.messages.create / completions.create)
+            if isinstance(node, ast.Await) and isinstance(node.value, ast.Call):
+                call_name = _node_name(node.value.func)
+                is_llm = any(pat in call_name for pat in _LLM_METHODS)
+                if is_llm:
+                    # Check if stream=True keyword arg present
+                    streaming = any(
+                        (isinstance(kw.value, ast.Constant) and kw.value.value is True)
+                        for kw in node.value.keywords
+                        if kw.arg == "stream"
+                    )
+                    span, cursor_ms = _make_span(
+                        name=f"{rel}:{getattr(node, 'lineno', 0)}",
+                        span_type="llm_call",
+                        cursor_ms=cursor_ms,
+                        duration_ms=500 if streaming else 3000,
+                        metadata={"streaming": streaming},
+                    )
                     spans.append(span)
-            elif isinstance(node, ast.Call):
-                span = self._analyze_call(node, lines, file_path)
-                if span:
+
+            # Detect sequential awaited function calls in function bodies
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                awaits_in_body = [
+                    n for n in ast.walk(node)
+                    if isinstance(n, ast.Expr)
+                    and isinstance(n.value, ast.Await)
+                    and isinstance(n.value.value, ast.Call)
+                    and not any(pat in _node_name(n.value.value.func) for pat in _LLM_METHODS)
+                ]
+                if len(awaits_in_body) >= 2:
+                    for aw in awaits_in_body:
+                        call_name = _node_name(aw.value.value.func)
+                        span, cursor_ms = _make_span(
+                            name=call_name or f"tool@{getattr(aw, 'lineno', 0)}",
+                            span_type="tool_call",
+                            cursor_ms=cursor_ms,
+                            duration_ms=400,
+                            metadata={},
+                        )
+                        spans.append(span)
+
+            # Detect synchronous HTTP calls (blocking)
+            if isinstance(node, ast.Call):
+                call_name = _node_name(node.func)
+                if call_name in _SYNC_HTTP:
+                    span, cursor_ms = _make_span(
+                        name=f"{call_name}@{rel}:{getattr(node, 'lineno', 0)}",
+                        span_type="api_call",
+                        cursor_ms=cursor_ms,
+                        duration_ms=500,
+                        metadata={"async": False},
+                    )
+                    spans.append(span)
+                elif call_name in _SYNC_DB:
+                    span, cursor_ms = _make_span(
+                        name=f"{call_name}@{rel}:{getattr(node, 'lineno', 0)}",
+                        span_type="db_query",
+                        cursor_ms=cursor_ms,
+                        duration_ms=200,
+                        metadata={"async": False},
+                    )
                     spans.append(span)
 
-        # Add agent_loop spans for init/setup functions
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                name_lower = node.name.lower()
-                if any(kw in name_lower for kw in ("init", "setup", "connect", "startup")):
-                    lineno = node.lineno
-                    spans.append(CodeSpan(
-                        id=str(uuid.uuid4()),
-                        name=node.name,
-                        file_path=file_path,
-                        line_number=lineno,
-                        span_type="agent_loop",
-                        pattern=lines[lineno - 1].strip() if lineno <= len(lines) else "",
-                        metadata={},
-                        start_ms=lineno * 10,
-                        end_ms=lineno * 10 + 600,
-                        duration_ms=600,
-                    ))
-
-        return spans
-
-    def _analyze_await(self, node: ast.Await, lines: list[str], file_path: str) -> CodeSpan | None:
-        lineno = getattr(node, "lineno", 0)
-        call = node.value
-        if not isinstance(call, ast.Call):
-            return None
-
-        chain = _attr_chain(call.func)
-        span_type, metadata, duration_ms = self._classify_call(chain, is_async=True)
-
-        if span_type is None:
-            return None
-
-        pattern = lines[lineno - 1].strip() if lineno and lineno <= len(lines) else chain
-
-        return CodeSpan(
-            id=str(uuid.uuid4()),
-            name=chain.split(".")[-1] if "." in chain else chain,
-            file_path=file_path,
-            line_number=lineno,
-            span_type=span_type,
-            pattern=pattern,
-            metadata=metadata,
-            start_ms=lineno * 10,
-            end_ms=lineno * 10 + duration_ms,
-            duration_ms=duration_ms,
-        )
-
-    def _analyze_call(self, node: ast.Call, lines: list[str], file_path: str) -> CodeSpan | None:
-        lineno = getattr(node, "lineno", 0)
-        chain = _attr_chain(node.func)
-
-        # Detect StructuredTool / FunctionTool instantiation
-        func_name = chain.split(".")[-1] if chain else ""
-        if func_name in ("StructuredTool", "FunctionTool"):
-            pattern = lines[lineno - 1].strip() if lineno and lineno <= len(lines) else chain
-            return CodeSpan(
-                id=str(uuid.uuid4()),
-                name=func_name,
-                file_path=file_path,
-                line_number=lineno,
-                span_type="tool_call",
-                pattern=pattern,
-                metadata={},
-                start_ms=lineno * 10,
-                end_ms=lineno * 10 + 30,
-                duration_ms=30,
-            )
-
-        # Detect sync HTTP calls (requests.get, httpx.get, etc.)
-        parts = chain.split(".")
-        if len(parts) >= 2:
-            module, method = parts[0], parts[-1]
-            if (module, method) in SYNC_HTTP_CALLS:
-                pattern = lines[lineno - 1].strip() if lineno and lineno <= len(lines) else chain
-                return CodeSpan(
-                    id=str(uuid.uuid4()),
-                    name=chain,
-                    file_path=file_path,
-                    line_number=lineno,
-                    span_type="api_call",
-                    pattern=pattern,
-                    metadata={"async": False},
-                    start_ms=lineno * 10,
-                    end_ms=lineno * 10 + 200,
-                    duration_ms=200,
+            # Detect __init__ / setup methods as cold-start candidates
+            if isinstance(node, ast.FunctionDef) and any(kw in node.name for kw in _INIT_KEYWORDS):
+                span, cursor_ms = _make_span(
+                    name=node.name,
+                    span_type="agent_loop",
+                    cursor_ms=cursor_ms,
+                    duration_ms=600,
+                    metadata={},
                 )
+                spans.append(span)
 
-        # Detect sync DB calls (session.execute, collection.find, etc.)
-        if func_name in DB_CALL_ATTRS and "async" not in chain.lower():
-            pattern = lines[lineno - 1].strip() if lineno and lineno <= len(lines) else chain
-            return CodeSpan(
-                id=str(uuid.uuid4()),
-                name=chain,
-                file_path=file_path,
-                line_number=lineno,
-                span_type="db_query",
-                pattern=pattern,
-                metadata={"async": False},
-                start_ms=lineno * 10,
-                end_ms=lineno * 10 + 200,
-                duration_ms=200,
-            )
-
-        return None
-
-    def _classify_call(self, chain: str, is_async: bool) -> tuple[str | None, dict, int]:
-        """Return (span_type, metadata, duration_ms) for a call chain."""
-        last = chain.split(".")[-1] if "." in chain else chain
-
-        # LLM calls
-        if any(pat in chain for pat in LLM_CALL_ATTRS):
-            # Check for streaming keyword presence heuristic
-            # We can't see keyword args here, so default to non-streaming (pessimistic)
-            return "llm_call", {"streaming": False}, 2500
-
-        # Tool calls
-        if last in ("run", "arun") and "tool" in chain.lower():
-            return "tool_call", {}, 100
-
-        # DB queries
-        if last in DB_CALL_ATTRS:
-            is_db_async = chain.startswith("await") or is_async
-            return "db_query", {"async": is_db_async}, 150
-
-        # HTTP calls (async versions — httpx.AsyncClient)
-        if "AsyncClient" in chain or "aiohttp" in chain:
-            return "api_call", {"async": True}, 150
-
-        return None, {}, 50
+        return spans, cursor_ms

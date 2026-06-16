@@ -1,148 +1,109 @@
+﻿"""
+SQLite-based local usage tracker. Works offline.
+Syncs to the remote API every 10 audits.
+"""
 import sqlite3
-import uuid
-from datetime import datetime, timezone
+import datetime
+import os
+import threading
 from pathlib import Path
 
-DB_PATH = Path.home() / ".arclat" / "usage.db"
+import httpx
 
-PLAN_LIMITS = {
-    "free": 20,
-    "pro": None,   # unlimited
-    "team": None,
-    "enterprise": None,
-}
+_DB_PATH = Path.home() / ".arclat" / "usage.db"
+_REMOTE = os.getenv("ARCLAT_API_URL", "https://arclat-production.up.railway.app")
+_lock = threading.Lock()
 
-SYNC_INTERVAL = 10  # sync to remote every N audits
+FREE_LIMIT = 20
 
 
-def _get_conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    _ensure_schema(conn)
+def _conn() -> sqlite3.Connection:
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS usage (
+            api_key TEXT NOT NULL,
+            month   TEXT NOT NULL,
+            count   INTEGER DEFAULT 0,
+            plan    TEXT DEFAULT 'free',
+            PRIMARY KEY (api_key, month)
+        )
+    """)
+    conn.commit()
     return conn
 
 
-def _ensure_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            api_key TEXT PRIMARY KEY,
-            plan    TEXT NOT NULL DEFAULT 'free'
-        );
-        CREATE TABLE IF NOT EXISTS usage (
-            api_key    TEXT NOT NULL,
-            month      TEXT NOT NULL,
-            count      INTEGER NOT NULL DEFAULT 0,
-            last_audit TEXT,
-            PRIMARY KEY (api_key, month)
-        );
-    """)
-    conn.commit()
+def _month() -> str:
+    return datetime.date.today().strftime("%Y-%m")
 
 
-def _current_month() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m")
+def _sync_remote(api_key: str, month: str, count: int) -> None:
+    try:
+        httpx.post(
+            f"{_REMOTE}/auth/usage/sync",
+            json={"api_key": api_key, "month": month, "count": count},
+            timeout=5,
+        )
+    except Exception:
+        pass  # sync is best-effort
 
 
-class UsageTracker:
-    def validate_key(self, api_key: str) -> dict | None:
-        with _get_conn() as conn:
-            row = conn.execute(
-                "SELECT api_key, plan FROM users WHERE api_key = ?", (api_key,)
-            ).fetchone()
-            if row is None:
-                # Auto-register unknown keys as free-tier for local dev convenience
-                conn.execute(
-                    "INSERT OR IGNORE INTO users (api_key, plan) VALUES (?, 'free')",
-                    (api_key,),
+def validate_and_check(api_key: str) -> tuple[bool, str]:
+    """Returns (allowed, reason). Fetches plan from remote on first use."""
+    if not api_key or not api_key.startswith("arc_"):
+        return False, "Invalid API key format. Get your key at https://arclat.vercel.app"
+
+    month = _month()
+    with _lock:
+        conn = _conn()
+        row = conn.execute(
+            "SELECT count, plan FROM usage WHERE api_key=? AND month=?",
+            (api_key, month),
+        ).fetchone()
+
+        if row is None:
+            # First use this month — fetch plan from remote
+            try:
+                resp = httpx.post(
+                    f"{_REMOTE}/auth/login",
+                    json={"api_key": api_key},
+                    timeout=5,
                 )
-                conn.commit()
-                return {"api_key": api_key, "plan": "free"}
-            return dict(row)
-
-    def check_limit(self, api_key: str) -> bool:
-        user = self.validate_key(api_key)
-        if user is None:
-            return False
-
-        limit = PLAN_LIMITS.get(user["plan"])
-        if limit is None:
-            return True  # unlimited plan
-
-        month = _current_month()
-        with _get_conn() as conn:
-            row = conn.execute(
-                "SELECT count FROM usage WHERE api_key = ? AND month = ?",
-                (api_key, month),
-            ).fetchone()
-            count = row["count"] if row else 0
-            return count < limit
-
-    def increment(self, api_key: str) -> int:
-        month = _current_month()
-        now = datetime.now(timezone.utc).isoformat()
-        with _get_conn() as conn:
+                plan = resp.json().get("plan", "free") if resp.is_success else "free"
+            except Exception:
+                plan = "free"
             conn.execute(
-                """
-                INSERT INTO usage (api_key, month, count, last_audit)
-                VALUES (?, ?, 1, ?)
-                ON CONFLICT(api_key, month) DO UPDATE SET
-                    count = count + 1,
-                    last_audit = excluded.last_audit
-                """,
-                (api_key, month, now),
+                "INSERT OR IGNORE INTO usage (api_key, month, count, plan) VALUES (?,?,0,?)",
+                (api_key, month, plan),
             )
             conn.commit()
-            row = conn.execute(
-                "SELECT count FROM usage WHERE api_key = ? AND month = ?",
-                (api_key, month),
-            ).fetchone()
-            new_count = row["count"]
+            row = (0, plan)
 
-        if new_count % SYNC_INTERVAL == 0:
-            self._sync_remote(api_key, month, new_count)
+        count, plan = row
 
-        return new_count
+    if plan == "free" and count >= FREE_LIMIT:
+        return False, (
+            f"Free plan limit reached ({FREE_LIMIT} audits/month). "
+            "Upgrade at https://arclat.vercel.app"
+        )
+    return True, ""
 
-    def get_usage(self, api_key: str) -> dict:
-        user = self.validate_key(api_key)
-        plan = user["plan"] if user else "free"
-        limit = PLAN_LIMITS.get(plan)
-        month = _current_month()
 
-        with _get_conn() as conn:
-            row = conn.execute(
-                "SELECT count, last_audit FROM usage WHERE api_key = ? AND month = ?",
-                (api_key, month),
-            ).fetchone()
+def increment(api_key: str) -> int:
+    month = _month()
+    with _lock:
+        conn = _conn()
+        conn.execute(
+            "INSERT INTO usage (api_key, month, count) VALUES (?,?,1) "
+            "ON CONFLICT(api_key, month) DO UPDATE SET count=count+1",
+            (api_key, month),
+        )
+        conn.commit()
+        new_count = conn.execute(
+            "SELECT count FROM usage WHERE api_key=? AND month=?", (api_key, month)
+        ).fetchone()[0]
 
-        count = row["count"] if row else 0
-        last_audit = row["last_audit"] if row else None
+    if new_count % 10 == 0:
+        threading.Thread(target=_sync_remote, args=(api_key, month, new_count), daemon=True).start()
 
-        # First day of next month
-        now = datetime.now(timezone.utc)
-        if now.month == 12:
-            resets_at = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc).isoformat()
-        else:
-            resets_at = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc).isoformat()
-
-        return {
-            "count": count,
-            "limit": limit,
-            "plan": plan,
-            "resets_at": resets_at,
-            "last_audit": last_audit,
-        }
-
-    def _sync_remote(self, api_key: str, month: str, count: int) -> None:
-        """Best-effort sync to remote API. Silently fails if unavailable."""
-        try:
-            import httpx
-            from mcp_server.config import settings
-            httpx.post(
-                f"{settings.API_BASE_URL}/usage/sync",
-                json={"api_key": api_key, "month": month, "count": count},
-                timeout=5,
-            )
-        except Exception:
-            pass
+    return new_count

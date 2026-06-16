@@ -1,41 +1,27 @@
-from typing import List, Dict, Any
+﻿from typing import List, Dict, Any
 from mcp_server.engine.base_detector import Finding, Span
 
 
 def rank_findings(findings: List[Finding]) -> List[Finding]:
-    severity_weight = {"high": 3, "medium": 2, "low": 1}
-
+    weight = {"high": 3, "medium": 2, "low": 1}
     sorted_findings = sorted(
         findings,
-        key=lambda f: severity_weight.get(f.severity.lower(), 1) * f.time_lost_ms,
-        reverse=True
+        key=lambda f: weight.get(f.severity.lower(), 1) * f.time_lost_ms,
+        reverse=True,
     )
-
-    for i, finding in enumerate(sorted_findings):
-        finding.rank = i + 1
-
+    for i, f in enumerate(sorted_findings):
+        f.rank = i + 1
     return sorted_findings
 
 
-def summarize_audit(ranked_findings: List[Finding], timeline: List[Span]) -> Dict[str, Any]:
-    total_bottlenecks = len(ranked_findings)
-    total_time_lost = sum(f.time_lost_ms for f in ranked_findings)
-
+def summarize_audit(ranked: List[Finding], timeline: List[Span]) -> Dict[str, Any]:
+    total_time_lost = sum(f.time_lost_ms for f in ranked)
     total_duration = 0
     if timeline:
-        min_start = min(s.start_ms for s in timeline)
-        max_end = max(s.end_ms for s in timeline)
-        total_duration = max_end - min_start
-
-    estimated_improvement_pct = 0
-    if total_duration > 0:
-        estimated_improvement_pct = int((total_time_lost / total_duration) * 100)
-
-    estimated_improvement_pct = min(estimated_improvement_pct, 80)
-    top_issue = ranked_findings[0].title if ranked_findings else "None"
-
+        total_duration = max(s.end_ms for s in timeline) - min(s.start_ms for s in timeline)
+    pct = min(int((total_time_lost / total_duration) * 100), 80) if total_duration > 0 else 0
     return {
-        "total_bottlenecks": total_bottlenecks,
-        "estimated_improvement_pct": estimated_improvement_pct,
-        "top_issue": top_issue
+        "total_bottlenecks": len(ranked),
+        "estimated_improvement_pct": pct,
+        "top_issue": ranked[0].title if ranked else "None",
     }
