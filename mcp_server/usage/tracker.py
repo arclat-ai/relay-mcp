@@ -103,6 +103,6 @@ def increment(api_key: str) -> int:
             "SELECT count FROM usage WHERE api_key=? AND month=?", (api_key, month)
         ).fetchone()[0]
 
-    threading.Thread(target=_sync_remote, args=(api_key, month, new_count), daemon=True).start()
+    _sync_remote(api_key, month, new_count)
 
     return new_count

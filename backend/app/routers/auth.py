@@ -150,8 +150,9 @@ def usage_sync(body: UsageSyncRequest):
     sb_admin = admin_client()
 
     # Look up user_id from api_key
-    user_result = sb_admin.table("users").select("id").eq("api_key", body.api_key).single().execute()
-    if not user_result.data:
+    try:
+        user_result = sb_admin.table("users").select("id").eq("api_key", body.api_key).single().execute()
+    except APIError:
         raise HTTPException(status_code=404, detail="Unknown api_key")
 
     user_id = user_result.data["id"]
