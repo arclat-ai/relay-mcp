@@ -15,6 +15,9 @@ class Finding:
     code_after: str
     effort: str
     impact: str
+    occurrences: int = 1
+    file: str = ""
+    lines: List[int] = field(default_factory=list)
 
 
 @dataclass

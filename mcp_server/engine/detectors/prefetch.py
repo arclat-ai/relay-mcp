@@ -1,29 +1,34 @@
-﻿from typing import List
+from typing import List
 from mcp_server.engine.base_detector import BaseDetector, Span, Finding
 
 
 class PrefetchDetector(BaseDetector):
+    """Flags a call pair that independently recurs across many functions -- a
+    stable A->B pattern worth speculatively prefetching. Scoped to the
+    independent-tool groups so it never fires on unrelated adjacency."""
+
     def detect(self, timeline: List[Span]) -> List[Finding]:
+        groups: dict = {}
+        for s in timeline:
+            if s.span_type == "tool_call" and s.metadata.get("group_id"):
+                groups.setdefault(s.metadata["group_id"], []).append(s)
+
+        pair_hits: dict = {}
+        for spans in groups.values():
+            spans = sorted(spans, key=lambda s: s.metadata.get("line", 0))
+            for a, b in zip(spans, spans[1:]):
+                pair = (a.name, b.name)
+                pair_hits.setdefault(pair, []).append(b.duration_ms)
+
         findings = []
-        tool_spans = [s for s in timeline if s.span_type == "tool_call"]
-        if len(tool_spans) < 2:
-            return findings
-        pairs_count: dict = {}
-        pair_duration: dict = {}
-        for i in range(len(tool_spans) - 1):
-            pair = (tool_spans[i].name, tool_spans[i + 1].name)
-            if tool_spans[i + 1].start_ms >= tool_spans[i].start_ms:
-                pairs_count[pair] = pairs_count.get(pair, 0) + 1
-                pair_duration.setdefault(pair, []).append(tool_spans[i + 1].duration_ms)
-        for pair, count in pairs_count.items():
-            if count >= 3:
-                avg = int(sum(pair_duration[pair]) / len(pair_duration[pair]))
+        for pair, durs in pair_hits.items():
+            if len(durs) >= 3 and pair[0] != pair[1]:
                 findings.append(Finding(
                     type="no_prefetch",
                     severity="low",
                     title="Prefetch predictable next calls",
-                    description="When Tool A is called, speculatively begin Tool B in background — they always run together.",
-                    time_lost_ms=avg,
+                    description=f"'{pair[0]}' is repeatedly followed by '{pair[1]}'. Speculatively start the second in the background when the first fires.",
+                    time_lost_ms=int(sum(durs) / len(durs)),
                     location=f"{pair[0]} -> {pair[1]}",
                     rank=0,
                     code_before="",

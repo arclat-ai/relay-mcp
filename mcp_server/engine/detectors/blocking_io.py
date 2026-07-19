@@ -8,16 +8,20 @@ class BlockingIODetector(BaseDetector):
         for span in timeline:
             if span.span_type in ("db_query", "api_call"):
                 if not span.metadata.get("async", True) and span.duration_ms > 100:
+                    code = span.metadata.get("code", "")
+                    is_http = span.span_type == "api_call"
+                    after = ("await client.get(...)  # use httpx.AsyncClient"
+                             if is_http else "await async_session.execute(query)")
                     findings.append(Finding(
                         type="blocking_io",
                         severity="medium",
                         title="Make I/O calls async",
-                        description="Synchronous DB and API calls block the event loop. Replace with async equivalents.",
+                        description="Synchronous I/O blocks the event loop, stalling all concurrent tasks. Replace with an async equivalent (httpx.AsyncClient / async DB driver).",
                         time_lost_ms=span.duration_ms,
                         location=span.name,
                         rank=0,
-                        code_before="result = requests.get(url)\ndata = db_session.execute(query)",
-                        code_after="async with httpx.AsyncClient() as client:\n    result = await client.get(url)\ndata = await async_session.execute(query)",
+                        code_before=code,
+                        code_after=after,
                         effort="medium",
                         impact="medium",
                     ))

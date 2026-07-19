@@ -1,37 +1,47 @@
-﻿from typing import List
+from typing import List
 from mcp_server.engine.base_detector import BaseDetector, Span, Finding
 
 
 class SequentialToolDetector(BaseDetector):
+    """Flags runs of consecutive, data-independent awaited calls that could run
+    concurrently via asyncio.gather()."""
+
     def detect(self, timeline: List[Span]) -> List[Finding]:
+        groups: dict = {}
+        for s in timeline:
+            if s.span_type == "tool_call":
+                gid = s.metadata.get("group_id")
+                if gid:
+                    groups.setdefault(gid, []).append(s)
+
         findings = []
-        tool_spans = [s for s in timeline if s.span_type == "tool_call"]
-        if not tool_spans:
-            return findings
+        for spans in groups.values():
+            if len(spans) < 2:
+                continue
+            spans = sorted(spans, key=lambda s: s.metadata.get("line", 0))
+            durations = [s.duration_ms for s in spans]
+            first = spans[0]
+            last = spans[-1]
+            location = f"{first.metadata.get('file')}:{first.metadata.get('line')}-{last.metadata.get('line')}"
 
-        groups, current_group = [], [tool_spans[0]]
-        for i in range(1, len(tool_spans)):
-            if tool_spans[i].start_ms - tool_spans[i - 1].end_ms < 50:
-                current_group.append(tool_spans[i])
-            else:
-                if len(current_group) >= 2:
-                    groups.append(current_group)
-                current_group = [tool_spans[i]]
-        if len(current_group) >= 2:
-            groups.append(current_group)
+            before = "\n".join(s.metadata.get("code", "") for s in spans)
+            targets = [", ".join(s.metadata.get("targets", [])) or "_" for s in spans]
+            calls = [s.metadata.get("call_src", "").replace("await ", "", 1).strip() for s in spans]
+            after = f"{', '.join(targets)} = await asyncio.gather(\n    " + ",\n    ".join(calls) + "\n)"
 
-        for g in groups:
-            durations = [s.duration_ms for s in g]
             findings.append(Finding(
                 type="sequential_tools",
-                severity="high" if len(g) >= 3 else "medium",
+                severity="high" if len(spans) >= 3 else "medium",
                 title="Parallelize independent tool calls",
-                description="Run independent tool calls concurrently with asyncio.gather() instead of awaiting them one by one.",
+                description=(
+                    f"{len(spans)} consecutive awaited calls are data-independent "
+                    f"and can run concurrently with asyncio.gather() instead of one at a time."
+                ),
                 time_lost_ms=sum(durations) - max(durations),
-                location=", ".join(s.name for s in g),
+                location=location,
                 rank=0,
-                code_before="result_a = await tool_a()\nresult_b = await tool_b()",
-                code_after="result_a, result_b = await asyncio.gather(tool_a(), tool_b())",
+                code_before=before,
+                code_after=after,
                 effort="low",
                 impact="high",
             ))
