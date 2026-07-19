@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "arclat-mcp"
-version = "0.1.2"
-description = "Arclat — AI agent latency auditor as an MCP server"
+name = "relay-mcp"
+version = "0.2.0"
+description = "Relay — AI agent latency auditor as an MCP server (an Arclat product)"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Abdur-Rafay", email = "abdur@lythe.ai" }]
@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.scripts]
-arclat-mcp = "mcp_server.server:main"
+relay = "mcp_server.cli:main"
+relay-mcp = "mcp_server.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_server"]
