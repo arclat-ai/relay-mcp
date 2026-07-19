@@ -130,11 +130,12 @@ def verify_findings(severity: str = "") -> str:
     if _last_result is None:
         return "No audit has been run yet. Call audit_codebase first."
 
-    bottlenecks = _last_result.to_dict()["bottlenecks"]
+    _rd = _last_result.to_dict()
+    bottlenecks = _rd["bottlenecks"]
     if severity:
         bottlenecks = [b for b in bottlenecks if b["severity"].lower() == severity.lower()]
 
-    v = _verify(bottlenecks)
+    v = _verify(bottlenecks, _rd.get("target"))
     s = v["summary"]
     lines = [
         "## Relay Verification",

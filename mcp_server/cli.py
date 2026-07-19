@@ -69,7 +69,7 @@ def cmd_scan(args) -> int:
 
 def cmd_verify(args) -> int:
     rd = _scan(args.directory)
-    v = verify_findings(rd["bottlenecks"])
+    v = verify_findings(rd["bottlenecks"], args.directory)
     s = v["summary"]
     print(f"{GREEN('$')} {BOLD('relay verify')} {args.directory}")
     print(DIM(f"tracing each flag against runtime{ELL}\n"))
