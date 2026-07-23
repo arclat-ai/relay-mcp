@@ -59,7 +59,7 @@ export default function ReportsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
 
-        {/* Sidebar — report list */}
+        {/* Sidebar - report list */}
         <aside className="flex flex-col gap-2">
           {EXAMPLE_REPORTS.map((r) => (
             <button
@@ -87,7 +87,7 @@ export default function ReportsPage() {
           </div>
         </aside>
 
-        {/* Main — report detail */}
+        {/* Main - report detail */}
         <section className="flex flex-col gap-4">
           <div className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
             <div className="flex items-start justify-between gap-4">

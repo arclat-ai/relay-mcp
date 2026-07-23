@@ -53,7 +53,7 @@ export default function LoginPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Welcome back</p>
             <h2 className="mt-3 font-heading text-4xl font-semibold text-white">Login</h2>
             <p className="mt-4 max-w-lg text-sm leading-7 text-textSecondary">
-              Upload logs, rank bottlenecks by impact, and ship concrete fixes — all from one place.
+              Upload logs, rank bottlenecks by impact, and ship concrete fixes - all from one place.
             </p>
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
               {['Ranked bottlenecks', 'Concrete fixes', 'Fast pipeline audits'].map((item) => (

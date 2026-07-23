@@ -10,7 +10,7 @@ _KIND_FIX = {
            "tasks. Use an async driver (asyncpg, aiosqlite, SQLAlchemy async)."),
     "sleep": ("await asyncio.sleep(...)",
               "time.sleep() inside an async function freezes the entire event "
-              "loop — every concurrent task stalls. Use await asyncio.sleep()."),
+              "loop - every concurrent task stalls. Use await asyncio.sleep()."),
     "subprocess": ("proc = await asyncio.create_subprocess_exec(...)\nout, _ = await proc.communicate()",
                    "A blocking subprocess call inside an async function stalls the "
                    "event loop until the child exits. Use asyncio.create_subprocess_exec."),

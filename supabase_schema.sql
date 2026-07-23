@@ -32,4 +32,4 @@ CREATE POLICY "Users can read own row" ON public.users
 CREATE POLICY "Users can read own usage" ON public.usage
     FOR SELECT USING (auth.uid() = user_id);
 
--- Service role bypasses RLS automatically — no extra policy needed for server-side writes.
+-- Service role bypasses RLS automatically - no extra policy needed for server-side writes.

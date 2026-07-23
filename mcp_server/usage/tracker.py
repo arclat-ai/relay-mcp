@@ -63,7 +63,7 @@ def validate_and_check(api_key: str) -> tuple[bool, str]:
             ).fetchone()
 
             if row is None:
-                # First use this month — fetch plan from remote
+                # First use this month - fetch plan from remote
                 try:
                     resp = httpx.post(
                         f"{_REMOTE}/auth/login",

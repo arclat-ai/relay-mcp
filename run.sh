@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Relay MCP — dev runner (macOS / Linux / Git Bash)
+# Relay MCP - dev runner (macOS / Linux / Git Bash)
 #
 # Usage:
 #   ./run.sh install        Install the relay-mcp package in editable mode

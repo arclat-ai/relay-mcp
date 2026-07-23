@@ -4,9 +4,9 @@
 
 | Part | What it does | Required? |
 |------|-------------|-----------|
-| `mcp_server/` | The MCP server — core product | Yes |
-| `backend/` | FastAPI — auth + API key issuance only | Yes (for key registration) |
-| `frontend/` | Next.js — landing page + register/login | Optional |
+| `mcp_server/` | The MCP server - core product | Yes |
+| `backend/` | FastAPI - auth + API key issuance only | Yes (for key registration) |
+| `frontend/` | Next.js - landing page + register/login | Optional |
 
 ---
 
@@ -57,22 +57,22 @@ Restart Claude Code, then say: `"Audit this codebase for latency issues"`
 
 ### MCP tools available
 
-- `audit_codebase(directory, api_key)` — scan a Python project, get ranked findings
-- `get_findings(severity?, finding_type?)` — filter results from last audit
-- `apply_fix(file_path, finding_id, dry_run=true)` — patch a file (dry run by default)
+- `audit_codebase(directory, api_key)` - scan a Python project, get ranked findings
+- `get_findings(severity?, finding_type?)` - filter results from last audit
+- `apply_fix(file_path, finding_id, dry_run=true)` - patch a file (dry run by default)
 
 ### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `RELAY_API_KEY` | — | Your API key (set in MCP config) |
+| `RELAY_API_KEY` | - | Your API key (set in MCP config) |
 | `RELAY_API_URL` | `https://api.arclat.com` | Backend URL for usage sync |
 
 Usage data is stored locally at `~/.relay/usage.db` (SQLite) and synced to the backend every 10 audits.
 
 ---
 
-## 2. Backend (FastAPI — auth + billing)
+## 2. Backend (FastAPI - auth + billing)
 
 ### Requirements
 
@@ -127,7 +127,7 @@ API available at `http://localhost:8000`. Docs at `http://localhost:8000/docs`.
 
 ---
 
-## 3. Frontend (Next.js — optional)
+## 3. Frontend (Next.js - optional)
 
 ### Requirements
 
@@ -173,14 +173,14 @@ App at `http://localhost:3000`.
 ## Running everything together
 
 ```bash
-# Terminal 1 — backend
+# Terminal 1 - backend
 cd backend && uvicorn app.main:app --reload --port 8000
 
-# Terminal 2 — frontend (optional)
+# Terminal 2 - frontend (optional)
 cd frontend && npm run dev
 ```
 
-The MCP server runs as a subprocess managed by Claude Code — you don't start it manually.
+The MCP server runs as a subprocess managed by Claude Code - you don't start it manually.
 
 ---
 

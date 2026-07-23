@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "relay-mcp"
 version = "0.3.0"
-description = "Relay — AI agent latency auditor as an MCP server (an Arclat product)"
+description = "Relay - AI agent latency auditor as an MCP server (an Arclat product)"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Abdur-Rafay", email = "abdur@lythe.ai" }]

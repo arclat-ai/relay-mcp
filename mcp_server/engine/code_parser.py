@@ -102,7 +102,7 @@ def _forwarded_names(call: ast.Call) -> set:
 def _resolve_forwarded_stream(func: ast.AST, names: set):
     """Best-effort: within `func`, decide whether the forwarded kwargs dict(s) set
     `stream`. Returns True (streaming), False (explicitly non-streaming), or None
-    (can't tell — leave it as unknown). Last write wins for repeated assignments.
+    (can't tell - leave it as unknown). Last write wins for repeated assignments.
 
     Recognizes the two common patterns:
         params = {..., "stream": True}          # dict literal
@@ -132,7 +132,7 @@ def _resolve_forwarded_stream(func: ast.AST, names: set):
 
 
 def _static_prompt_hash(call: ast.Call) -> Optional[str]:
-    """Hash of a *fully static* LLM call — every arg/kwarg value is a constant
+    """Hash of a *fully static* LLM call - every arg/kwarg value is a constant
     (or a structure of constants). Two call sites with the same hash send the
     same input every time, so the response is cacheable. Calls with variable
     args get no hash: their runtime inputs differ."""
@@ -210,7 +210,7 @@ class CodeParser:
             id(n.value) for n in ast.walk(tree)
             if isinstance(n, ast.Await) and isinstance(n.value, ast.Call)
         }
-        # (start, end, is_async, name) for every function — innermost enclosing
+        # (start, end, is_async, name) for every function - innermost enclosing
         # function decides whether a call runs on the event loop.
         self._funcs = [
             (n.lineno, getattr(n, "end_lineno", n.lineno),
@@ -221,14 +221,14 @@ class CodeParser:
         spans: List[Span] = []
 
         for node in ast.walk(tree):
-            # Synchronous blocking I/O — flagged anywhere.
+            # Synchronous blocking I/O - flagged anywhere.
             if isinstance(node, ast.Call):
                 spans_here, cursor_ms = self._blocking_io(node, cursor_ms)
                 spans.extend(spans_here)
                 spans_here, cursor_ms = self._client_init(node, cursor_ms)
                 spans.extend(spans_here)
 
-            # LLM calls + sequential independent work — scoped per function.
+            # LLM calls + sequential independent work - scoped per function.
             if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                 spans_here, cursor_ms = self._scan_function(node, cursor_ms)
                 spans.extend(spans_here)
@@ -248,7 +248,7 @@ class CodeParser:
         return seg.strip() if seg else ""
 
     def _blocking_io(self, node: ast.Call, cursor_ms: int):
-        # Awaited calls run on the event loop asynchronously — not blocking.
+        # Awaited calls run on the event loop asynchronously - not blocking.
         if id(node) in self._awaited_calls:
             return [], cursor_ms
         call_name = _node_name(node.func)
@@ -271,7 +271,7 @@ class CodeParser:
         if call_name in _SYNC_DB:
             return emit("db_query", 200, "db")
         # sleep / subprocess are only latency bugs when they run on the event
-        # loop — in plain sync code they're normal, so don't flag them there.
+        # loop - in plain sync code they're normal, so don't flag them there.
         if in_async and call_name in _SYNC_SLEEP:
             return emit("api_call", 1000, "sleep")
         if in_async and call_name in _SYNC_SUBPROC:
@@ -280,7 +280,7 @@ class CodeParser:
 
     def _client_init(self, node: ast.Call, cursor_ms: int):
         """Flag API-client construction inside an ordinary (per-request)
-        function — connection/TLS setup should happen once at startup."""
+        function - connection/TLS setup should happen once at startup."""
         call_name = _node_name(node.func)
         if call_name not in _CLIENT_CTORS:
             return [], cursor_ms
@@ -310,7 +310,7 @@ class CodeParser:
                 if _is_llm_call(call_name):
                     streaming = _is_streaming(n.value, call_name)
                     # If args are forwarded via **kwargs we can't see stream=...
-                    # directly — but try to resolve it from the same function first.
+                    # directly - but try to resolve it from the same function first.
                     unknown = any(kw.arg is None for kw in n.value.keywords)
                     if not streaming and unknown:
                         resolved = _resolve_forwarded_stream(func, _forwarded_names(n.value))

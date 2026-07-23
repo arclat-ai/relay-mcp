@@ -31,7 +31,7 @@ class PrefetchDetector(BaseDetector):
                     type="no_prefetch",
                     severity="low",
                     title="Prefetch predictable next calls",
-                    description="When Tool A is called, speculatively begin Tool B in the background — historical patterns show they always run together.",
+                    description="When Tool A is called, speculatively begin Tool B in the background - historical patterns show they always run together.",
                     time_lost_ms=avg_duration,
                     location=f"{pair[0]} -> {pair[1]}",
                     rank=0,

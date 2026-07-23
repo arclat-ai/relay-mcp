@@ -9,13 +9,13 @@ _bearer = HTTPBearer()
 
 @lru_cache(maxsize=1)
 def _anon_client() -> Client:
-    """Anon key client — used for sign_up / sign_in (respects RLS)."""
+    """Anon key client - used for sign_up / sign_in (respects RLS)."""
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
 
 @lru_cache(maxsize=1)
 def _admin_client() -> Client:
-    """Service-role client — bypasses RLS for server-side reads/writes."""
+    """Service-role client - bypasses RLS for server-side reads/writes."""
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
@@ -30,7 +30,7 @@ def admin_client() -> Client:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(_bearer),
 ) -> dict:
-    """FastAPI dependency — validates Bearer JWT and returns the Supabase user dict."""
+    """FastAPI dependency - validates Bearer JWT and returns the Supabase user dict."""
     token = credentials.credentials
     try:
         response = _admin_client().auth.get_user(token)

@@ -1,13 +1,42 @@
-# Relay — AI Agent Latency Auditor
+# Relay - AI Agent Latency Auditor
 
-Relay is an MCP server that plugs into Claude Code and audits your AI agent codebase for latency bottlenecks. It reads your actual source code, ranks issues by impact, and can apply fixes directly from Claude Code.
+Relay is an MCP server (and CLI) that audits AI agent and voice-agent codebases for
+latency bottlenecks. It reads your actual source with an AST engine, ranks issues by
+impact, runs a verification pass to drop false positives, and can apply fixes directly
+from Claude Code.
 
 Relay is a product of the **Arclat** studio. Learn more at [relay.arclat.com](https://relay.arclat.com).
 
-## Install Relay
+---
 
-1. Get your free API key at [relay.arclat.com](https://relay.arclat.com)
-2. Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
+## Features
+
+- **AST-based detection.** Parses your Python with the real grammar, not regexes, so it
+  understands async/await, call targets, keyword arguments, and `**kwargs` forwarding.
+- **Six latency detectors.** Streaming gaps, sequential tool calls, cache misses,
+  blocking I/O in async code, per-request client construction, and prefetch
+  opportunities (see [What it detects](#what-it-detects)).
+- **Verification pass.** Every candidate is re-read in context and either confirmed as a
+  real gap or dismissed as a false positive, each with a one-line reason.
+- **Impact ranking.** Findings are scored and sorted so the highest-impact fixes surface
+  first.
+- **Apply fixes from Claude Code.** `apply_fix` rewrites the flagged site (dry-run by
+  default) so you can review before writing.
+- **Runs as MCP or CLI.** The same engine backs the Claude Code tools and the `relay`
+  command, so agent output and terminal output never diverge.
+- **CI gate.** `relay verify --fail-on high` exits non-zero when a confirmed high-impact
+  gap remains, so it can fail a pipeline.
+- **Dashboard reports.** Each audit writes a `relay-report.json` you can upload to the
+  Relay dashboard for the full analytics view.
+- **Persistent state.** The last audit is saved to `~/.relay/last-audit.json`, so
+  `get_findings`, `verify_audit`, and `apply_fix` keep working across MCP restarts.
+
+---
+
+## Install (Claude Code / MCP)
+
+1. Get your free API key at [relay.arclat.com](https://relay.arclat.com).
+2. Add Relay to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 
 ```json
 {
@@ -23,93 +52,129 @@ Relay is a product of the **Arclat** studio. Learn more at [relay.arclat.com](ht
 }
 ```
 
-3. In Claude Code, say: `"Audit this codebase for latency issues"`
+3. In Claude Code, say: `"Audit this codebase for latency issues"`.
 4. Done.
 
-Each audit also writes a `relay-report.json` file into the audited directory. Upload it to the [Relay dashboard](https://relay.arclat.com/dashboard) (invited access) for the full analytics view.
+Each audit also writes `relay-report.json` into the audited directory. Upload it to the
+[Relay dashboard](https://relay.arclat.com/dashboard) (invited access) for the full
+analytics view.
 
-## Usage limits
+---
 
-| Plan       | Price     | Limits                                      |
-|------------|-----------|---------------------------------------------|
-| Free       | $0        | 20 audits/month, findings only              |
-| Pro        | $19/mo    | Unlimited audits + apply_fix tool           |
-| Team       | $49/mo    | 5 seats + CI/CD GitHub Action               |
-| Enterprise | $200+/mo  | Custom limits + Slack integration + support |
+## MCP tools
 
-## MCP Tools
+| Tool             | Description                                                                                          |
+|------------------|------------------------------------------------------------------------------------------------------|
+| `audit_codebase` | Reads Python files in a directory, returns ranked findings (each with a verification verdict) and writes `relay-report.json`. |
+| `get_findings`   | Filters findings from the last audit by severity, type, or verification status.                      |
+| `verify_audit`   | Shows which findings the semantic pass confirmed vs dismissed, with reasons.                         |
+| `apply_fix`      | Applies a fix (`dry_run=true` by default; file path defaults to the finding's file).                 |
+| `usage_status`   | Shows your plan and audits used / remaining this month.                                               |
 
-| Tool              | Description                                              |
-|-------------------|----------------------------------------------------------|
-| `audit_codebase`  | Reads Python files in a directory, returns ranked findings (each with a verification verdict) and writes `relay-report.json` |
-| `get_findings`    | Filters findings from last audit by severity, type, or verification status |
-| `verify_audit`    | Shows which findings the semantic pass confirmed vs dismissed, with reasons |
-| `apply_fix`       | Applies a fix (dry_run=true by default; file path defaults to the finding's file) |
-| `usage_status`    | Shows your plan and audits used / remaining this month   |
-
-The last audit is persisted to `~/.relay/last-audit.json`, so `get_findings`,
-`verify_audit`, and `apply_fix` keep working after an MCP server restart.
-
-## What it detects
-
-- **SyncOutput** — LLM calls missing streaming (`stream=True`), including calls that forward `**kwargs`
-- **SequentialTools** — consecutive data-independent awaits that should use `asyncio.gather()`
-- **CacheMiss** — the same fully-static LLM call repeated at multiple call sites with no caching
-- **BlockingIO** — sync `requests` / DB calls, plus `time.sleep` and blocking `subprocess` calls inside async functions
-- **ColdStart** — API clients (`OpenAI`, `httpx.Client`, `aiohttp.ClientSession`, …) constructed per-request instead of at startup
-- **Prefetch** — predictable tool-call pairs that could be started speculatively
-
-Every finding then goes through a **verification pass** that re-reads the flagged
-site in context and either confirms it as a real latency gap or dismisses it as a
-false positive — with a one-line reason either way.
+---
 
 ## CLI
 
 The same engine ships as a `relay` command:
 
 ```bash
-relay scan   <dir>          # structural pass — flag candidate latency patterns
-relay verify <dir>          # semantic pass — keep only confirmed gaps
+relay scan   <dir>          # structural pass - flag candidate latency patterns
+relay verify <dir>          # semantic pass  - keep only confirmed gaps
 relay report <dir> [-o f]   # write relay-report.json for the dashboard
 relay mcp                   # run the MCP server (same as relay-mcp)
 ```
 
-`scan` and `verify` accept `--json` for machine-readable output (CI, jq).
-`verify` also accepts `--fail-on {none,high,any}` so it can gate a pipeline —
-`relay verify . --fail-on high` exits non-zero when a confirmed high-impact
-latency gap remains.
+- `scan` and `verify` accept `--json` for machine-readable output (CI, jq).
+- `verify` accepts `--fail-on {none,high,any}` to gate a pipeline. For example,
+  `relay verify . --fail-on high` exits non-zero when a confirmed high-impact latency
+  gap remains.
+
+### Use in CI
+
+```yaml
+- run: pip install relay-mcp
+- run: relay verify . --fail-on high
+```
+
+---
+
+## What it detects
+
+| Detector          | What it flags                                                                                       |
+|-------------------|------------------------------------------------------------------------------------------------------|
+| **SyncOutput**    | LLM calls missing streaming (`stream=True`), including calls that forward `**kwargs`.                 |
+| **SequentialTools** | Consecutive data-independent awaits that should run under `asyncio.gather()`.                       |
+| **CacheMiss**     | The same fully-static LLM call repeated at multiple call sites with no caching.                       |
+| **BlockingIO**    | Sync `requests` / DB calls, plus `time.sleep` and blocking `subprocess` calls inside async functions. |
+| **ColdStart**     | API clients (`OpenAI`, `httpx.Client`, `aiohttp.ClientSession`, ...) built per-request instead of at startup. |
+| **Prefetch**      | Predictable tool-call pairs that could be started speculatively.                                      |
+
+### Verification pass
+
+Every finding goes through a verification pass that re-reads the flagged site in context
+and either confirms it as a real latency gap or dismisses it as a false positive, with a
+one-line reason either way. The summary counts (`flagged`, `confirmed`, `dismissed`,
+`confirmed_high_impact`) drive both the CLI output and the `--fail-on` CI gate.
+
+---
+
+## Usage limits
+
+| Plan       | Price     | Limits                                       |
+|------------|-----------|----------------------------------------------|
+| Free       | $0        | 20 audits/month, findings only               |
+| Pro        | $19/mo    | Unlimited audits + apply_fix tool            |
+| Team       | $49/mo    | 5 seats + CI/CD GitHub Action                |
+| Enterprise | $200+/mo  | Custom limits + Slack integration + support  |
+
+---
+
+## Environment variables
+
+| Variable        | Purpose                                        |
+|-----------------|------------------------------------------------|
+| `RELAY_API_KEY` | Your Relay API key (`rly_...`).                |
+| `RELAY_API_URL` | Override the billing/usage sync endpoint.      |
+
+Legacy `ARCLAT_API_KEY` / `ARCLAT_API_URL` are still read as a fallback.
+
+---
 
 ## Repository structure
 
 ```
 relay-mcp/
 ├── mcp_server/          # MCP server (ships as relay-mcp on PyPI)
-│   ├── server.py        # entry point, exposes 5 MCP tools
-│   ├── engine/          # audit engine (detectors, scorer, code_parser)
+│   ├── server.py        # entry point, exposes the MCP tools
+│   ├── cli.py           # `relay` command (scan / verify / report / mcp)
+│   ├── engine/          # audit engine (detectors, scorer, verify, code_parser)
 │   └── usage/           # SQLite-based usage tracker
-├── api/ (backend/)      # lightweight FastAPI — auth + billing only
+├── backend/             # lightweight FastAPI - auth + billing only
 ├── frontend/            # Next.js 14 landing page + dashboard
+├── tests/               # end-to-end engine tests
 └── pyproject.toml       # package config for uvx/pip install
 ```
 
-## Environment variables
-
-| Variable         | Purpose                                              |
-|------------------|------------------------------------------------------|
-| `RELAY_API_KEY`  | Your Relay API key (`rly_...`)                        |
-| `RELAY_API_URL`  | Override the billing/usage sync endpoint             |
-
-Legacy `ARCLAT_API_KEY` / `ARCLAT_API_URL` are still read as a fallback.
+---
 
 ## Development
 
 ```bash
-# Install MCP server in editable mode
+# Install the MCP server + CLI in editable mode with dev deps
 pip install -e ".[dev]"
 
-# Run FastAPI backend
+# Run the test suite
+pytest
+
+# Run the FastAPI backend
 cd backend && uvicorn app.main:app --reload
 
-# Run Next.js frontend
+# Run the Next.js frontend
 cd frontend && npm run dev
 ```
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).

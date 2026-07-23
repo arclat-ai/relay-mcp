@@ -4,7 +4,7 @@ from mcp_server.engine.base_detector import BaseDetector, Span, Finding
 
 class CacheMissDetector(BaseDetector):
     """Flags LLM calls whose inputs are fully static (every arg is a constant)
-    and that appear at 2+ call sites — identical input means an identical,
+    and that appear at 2+ call sites - identical input means an identical,
     cacheable response, yet full latency is paid at every site."""
 
     def detect(self, timeline: List[Span]) -> List[Finding]:
@@ -24,7 +24,7 @@ class CacheMissDetector(BaseDetector):
                 title="Cache repeated identical LLM calls",
                 description=(
                     f"The same fully-static LLM call appears at {len(spans)} call sites. "
-                    "Identical input produces an identical response — cache it "
+                    "Identical input produces an identical response - cache it "
                     "(in-process dict or Redis) instead of paying full latency each time."
                 ),
                 time_lost_ms=int((len(spans) - 1) * avg_dur),

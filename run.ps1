@@ -1,5 +1,5 @@
 <#
-  Relay MCP — dev runner (Windows / PowerShell)
+  Relay MCP - dev runner (Windows / PowerShell)
 
   Usage:
     .\run.ps1 install        Install the relay-mcp package in editable mode

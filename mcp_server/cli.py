@@ -1,8 +1,8 @@
 """
 `relay` command-line interface.
 
-    relay scan   <dir>     structural pass — flag candidate latency patterns
-    relay verify <dir>     semantic pass  — trace each flag, keep only real gaps
+    relay scan   <dir>     structural pass - flag candidate latency patterns
+    relay verify <dir>     semantic pass  - trace each flag, keep only real gaps
     relay report <dir>     write relay-report.json for the dashboard
     relay mcp              run the MCP server (same as `relay-mcp`)
 
@@ -76,7 +76,7 @@ def cmd_scan(args) -> int:
 
 def cmd_verify(args) -> int:
     rd = _scan(args.directory)
-    # The engine already ran the verify pass — verdicts are nested per finding.
+    # The engine already ran the verify pass - verdicts are nested per finding.
     v = {
         "findings": [dict(f, **f["verification"]) for f in rd["bottlenecks"]],
         "summary": rd["verification"],
@@ -140,7 +140,7 @@ def cmd_mcp(args) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(prog="relay", description="Relay — AI voice/agent latency auditor")
+    p = argparse.ArgumentParser(prog="relay", description="Relay - AI voice/agent latency auditor")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     ps = sub.add_parser("scan", help="flag candidate latency patterns")

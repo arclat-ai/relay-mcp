@@ -110,7 +110,7 @@ export default function Dashboard() {
 
         {/* Usage */}
         <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <p className="text-xs uppercase tracking-[0.3em] text-accent mb-3">Usage — {profile.usage.month}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-accent mb-3">Usage - {profile.usage.month}</p>
           <p className="text-4xl font-semibold text-white">
             {profile.usage.count}
             {profile.usage.limit && (

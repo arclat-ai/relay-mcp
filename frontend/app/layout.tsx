@@ -7,7 +7,7 @@ import Footer from '../components/ui/Footer'
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' })
 
 export const metadata: Metadata = {
-  title: 'Arclat — AI Agent Latency Optimizer',
+  title: 'Arclat - AI Agent Latency Optimizer',
   description: "Your AI agent is slow. Here's why.",
 }
 

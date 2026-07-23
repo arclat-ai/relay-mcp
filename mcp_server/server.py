@@ -54,8 +54,8 @@ def _verification_line(f: dict) -> str:
     if not v:
         return ""
     if v["status"] == "confirmed":
-        return f"**Verified:** ✓ confirmed ({v['impact']} impact) — {v['reason']}"
-    return f"**Verified:** ✗ dismissed — {v['reason']}"
+        return f"**Verified:** ✓ confirmed ({v['impact']} impact) - {v['reason']}"
+    return f"**Verified:** ✗ dismissed - {v['reason']}"
 
 
 def _format_findings(bottlenecks: list) -> str:
@@ -142,14 +142,14 @@ def audit_codebase(directory: str, api_key: str = "", write_report: bool = True)
     if result.files_scanned == 0:
         return (
             f"⚠️ No Python files found under `{directory}` "
-            "(venv/tests/examples/docs are skipped). Nothing was audited — "
+            "(venv/tests/examples/docs are skipped). Nothing was audited - "
             "check the path points at the codebase root."
         )
 
     saved_note = ""
     if write_report:
         report_path = _write_report(report, directory)
-        saved_note = f"\n_Saved to `{report_path}` — upload it to {DASHBOARD_URL} for the full analytics view._\n"
+        saved_note = f"\n_Saved to `{report_path}` - upload it to {DASHBOARD_URL} for the full analytics view._\n"
 
     summary = report["summary"]
     verification = report["verification"]
@@ -175,9 +175,9 @@ def get_findings(severity: str = "", finding_type: str = "", status: str = "") -
     Return findings from the last audit, optionally filtered.
 
     Args:
-        severity: Filter by severity — 'high', 'medium', or 'low'. Leave blank for all.
+        severity: Filter by severity - 'high', 'medium', or 'low'. Leave blank for all.
         finding_type: Filter by type e.g. 'sequential_tools', 'sync_output'. Leave blank for all.
-        status: Filter by verification status — 'confirmed' or 'dismissed'. Leave blank for all.
+        status: Filter by verification status - 'confirmed' or 'dismissed'. Leave blank for all.
     """
     report = _get_last()
     if report is None:
@@ -223,7 +223,7 @@ def verify_audit() -> str:
         loc = f["location"]
         loc_str = loc["display"] if isinstance(loc, dict) else loc
         mark = "✓" if ver["status"] == "confirmed" else "✗"
-        lines.append(f"- {mark} **[{f['rank']}] {f['title']}** — {ver['reason']}  \n  `{loc_str}`")
+        lines.append(f"- {mark} **[{f['rank']}] {f['title']}** - {ver['reason']}  \n  `{loc_str}`")
     return "\n".join(lines)
 
 
@@ -271,7 +271,7 @@ def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> s
         loc = match.get("location")
         file_path = (loc.get("file") if isinstance(loc, dict) else "") or match.get("file", "")
     if not file_path or not file_path.endswith(".py"):
-        return "This finding has no single file location — pass file_path explicitly."
+        return "This finding has no single file location - pass file_path explicitly."
 
     before = match.get("code_before", "")
     after = match.get("code_after", "")
@@ -287,14 +287,14 @@ def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> s
     if before not in source:
         return (
             f"Could not locate the exact pattern in {file_path}.\n"
-            f"Apply manually — replace:\n```python\n{before}\n```\nwith:\n```python\n{after}\n```"
+            f"Apply manually - replace:\n```python\n{before}\n```\nwith:\n```python\n{after}\n```"
         )
 
     new_source = source.replace(before, after, 1)
 
     if dry_run:
         return (
-            f"**Dry run — no changes written.**\n\n"
+            f"**Dry run - no changes written.**\n\n"
             f"File: `{file_path}`\n\n"
             f"**Before:**\n```python\n{before}\n```\n\n"
             f"**After:**\n```python\n{after}\n```\n\n"

@@ -4,7 +4,7 @@ Verification pass.
 `scan` (the detectors) is a structural stage: it flags *candidate* patterns.
 `verify` is a semantic stage: it re-reads each flagged site in context and
 decides whether the candidate is a real, actionable latency gap or a false
-positive — and, when it dismisses one, says why in one line.
+positive - and, when it dismisses one, says why in one line.
 
 The heuristics here are deliberately conservative and explainable. They encode
 the manual checks a reviewer does:
@@ -15,14 +15,14 @@ the manual checks a reviewer does:
     or one returning structured JSON, is non-streamable by design and off the
     spoken-turn hot path;
   * a run of awaited calls whose targets are ordered emits / queue ops must stay
-    ordered — parallelizing them changes behaviour;
+    ordered - parallelizing them changes behaviour;
   * a "parallelize these awaits" suggestion is worthless if one branch does no
-    I/O — gathering an expensive call with an in-memory lookup saves nothing.
+    I/O - gathering an expensive call with an in-memory lookup saves nothing.
     We resolve each awaited callee in the codebase and check whether it is
     provably cheap (no await, no I/O in its body). Cost, not call count.
 
 This is heuristic, not a proof. Anything it cannot confidently dismiss it marks
-`confirmed` so a human still looks — including two genuinely expensive calls,
+`confirmed` so a human still looks - including two genuinely expensive calls,
 which are a real gather win. Impact is annotated so cold-path survivors don't
 masquerade as per-turn wins.
 """
@@ -203,7 +203,7 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
         if ctx and lineno:
             _, _, is_async = ctx.func_at(lineno)
             if not is_async:
-                return _d("synchronous batch API — off the async path")
+                return _d("synchronous batch API - off the async path")
         return _c("blocks the event loop in an async path", impact="high")
 
     if ftype == "sync_output":
@@ -212,16 +212,16 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
             name = getattr(fn, "name", "") if fn else ""
             low = seg.lower()
             if name and _UTILITY_NAME.search(name):
-                return _d("utility call — off the voice hot path")
+                return _d("utility call - off the voice hot path")
             if any(tok in low for tok in _STRUCTURED):
-                return _d("structured/JSON output — not streamable")
+                return _d("structured/JSON output - not streamable")
             if "yield" in low:
-                return _d("streaming set upstream — not the returned path")
+                return _d("streaming set upstream - not the returned path")
         # No dismissal evidence. If streaming is *known* to be off (severity
         # high, not a **kwargs guess), keep it; a guess stays dismissed.
         if str(finding.get("severity", "")).lower() == "high":
             return _c("full completion awaited before first token", impact="medium")
-        return _d("streaming state unknown (**kwargs) — unconfirmed")
+        return _d("streaming state unknown (**kwargs) - unconfirmed")
 
     if ftype == "sequential_tools":
         terminals = _awaited_terminals(finding.get("code_before", ""))
@@ -231,24 +231,24 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
                 if t:
                     terminals.append(t)
         if set(terminals) & _ORDERED:
-            return _d("ordered emits / queue ops — must stay sequential")
+            return _d("ordered emits / queue ops - must stay sequential")
         # cost-aware: if a branch provably does no I/O, gathering saves nothing.
         cheap = next((t for t in terminals if defs.cost(t) == CHEAP), None)
         if cheap:
-            return _d(f"one branch ({cheap}) is in-memory — nothing to parallelize")
-        return _c("independent awaits — gather-able", impact="low")
+            return _d(f"one branch ({cheap}) is in-memory - nothing to parallelize")
+        return _c("independent awaits - gather-able", impact="low")
 
     # ---- cold_start (per-request client construction) ---------------------
     if ftype == "cold_start":
-        return _c("client constructed per call — hoist to startup", impact="medium")
+        return _c("client constructed per call - hoist to startup", impact="medium")
 
     # ---- cache_miss (repeated fully-static LLM call) ----------------------
     if ftype == "cache_miss":
-        return _c("identical static input at multiple sites — cacheable", impact="medium")
+        return _c("identical static input at multiple sites - cacheable", impact="medium")
 
     # ---- no_prefetch ------------------------------------------------------
     if ftype == "no_prefetch":
-        return _c("stable call pair — speculative prefetch possible", impact="low")
+        return _c("stable call pair - speculative prefetch possible", impact="low")
 
     return _c("no dismissal rule matched", impact="unknown")
 

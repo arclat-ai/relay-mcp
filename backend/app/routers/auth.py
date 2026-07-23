@@ -158,7 +158,7 @@ def usage_sync(body: UsageSyncRequest):
 
     user_id = user_result.data["id"]
 
-    # Upsert usage row — take the higher of the two counts to avoid overwriting newer data
+    # Upsert usage row - take the higher of the two counts to avoid overwriting newer data
     existing = sb_admin.table("usage").select("audit_count").eq("user_id", user_id).eq("month", body.month).execute()
     current_count = existing.data[0]["audit_count"] if existing.data else 0
     final_count = max(current_count, body.count)

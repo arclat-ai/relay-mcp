@@ -29,13 +29,13 @@ export default function Home() {
             </div>
 
             <h1 className="mt-7 text-5xl font-semibold leading-[1.05] tracking-tight text-[var(--text)] sm:text-6xl">
-              Arclat audits your agent codebase for latency issues —
+              Arclat audits your agent codebase for latency issues -
               <br />
               <span className="text-[var(--accent)]">from inside Claude Code.</span>
             </h1>
 
             <p className="mt-5 text-base leading-7 text-[var(--muted)]">
-              No log files. No context switching. Arclat reads your actual code, ranks bottlenecks by impact, and applies fixes — all from a single Claude Code conversation.
+              No log files. No context switching. Arclat reads your actual code, ranks bottlenecks by impact, and applies fixes - all from a single Claude Code conversation.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -94,7 +94,7 @@ export default function Home() {
                 <p className="mt-1.5 text-sm leading-6 text-[var(--text)]">20 audits/month. Findings included. No credit card.</p>
               </div>
               <div className="rounded-lg border border-white/10 p-3.5">
-                <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Pro — $19/mo</p>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Pro - $19/mo</p>
                 <p className="mt-1.5 text-sm leading-6 text-[var(--text)]">Unlimited audits + apply_fix tool + CI/CD GitHub Action.</p>
               </div>
             </div>
@@ -105,7 +105,7 @@ export default function Home() {
         <section className="grid gap-4 lg:grid-cols-3">
           {[
             { title: 'Works inside Claude Code', description: 'No browser tab, no upload flow. Arclat lives in your existing workflow as an MCP server.' },
-            { title: 'Reads your actual code', description: 'AST-based analysis on your .py files. Not logs, not guesses — the real source of truth.' },
+            { title: 'Reads your actual code', description: 'AST-based analysis on your .py files. Not logs, not guesses - the real source of truth.' },
             { title: 'One-line install', description: "Add the MCP config snippet, get your API key, and you're auditing in under 60 seconds." },
           ].map((feature, i) => {
             const Icon = featureIcons[i]
