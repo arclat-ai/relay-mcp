@@ -1,9 +1,11 @@
 # Relay - AI Agent Latency Auditor
 
-Relay is an MCP server (and CLI) that audits AI agent and voice-agent codebases for
-latency bottlenecks. It reads your actual source with an AST engine, ranks issues by
-impact, runs a verification pass to drop false positives, and can apply fixes directly
-from Claude Code.
+Relay is an open-source MCP server (and CLI) that audits AI agent and voice-agent
+codebases for latency bottlenecks. It reads your actual source with an AST engine, ranks
+issues by impact, runs a verification pass to drop false positives, and can apply fixes
+directly from Claude Code.
+
+No account, no API key, no backend - it runs entirely on your machine.
 
 Relay is a product of the **Arclat** studio. Learn more at [relay.arclat.com](https://relay.arclat.com).
 
@@ -27,37 +29,34 @@ Relay is a product of the **Arclat** studio. Learn more at [relay.arclat.com](ht
 - **CI gate.** `relay verify --fail-on high` exits non-zero when a confirmed high-impact
   gap remains, so it can fail a pipeline.
 - **Dashboard reports.** Each audit writes a `relay-report.json` you can upload to the
-  Relay dashboard for the full analytics view.
-- **Persistent state.** The last audit is saved to `~/.relay/last-audit.json`, so
+  [Relay dashboard](https://relay.arclat.com/dashboard) for a full visual analytics view.
+- **Zero runtime dependencies to speak of.** Just the `mcp` package - no network calls,
+  no telemetry, nothing leaves your machine.
+- **Persistent state.** The last audit is cached at `~/.relay/last-audit.json`, so
   `get_findings`, `verify_audit`, and `apply_fix` keep working across MCP restarts.
 
 ---
 
 ## Install (Claude Code / MCP)
 
-1. Get your free API key at [relay.arclat.com](https://relay.arclat.com).
-2. Add Relay to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
+Add Relay to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 
 ```json
 {
   "mcpServers": {
     "relay": {
       "command": "uvx",
-      "args": ["relay-mcp"],
-      "env": {
-        "RELAY_API_KEY": "your_key_here"
-      }
+      "args": ["relay-mcp"]
     }
   }
 }
 ```
 
-3. In Claude Code, say: `"Audit this codebase for latency issues"`.
-4. Done.
+Then, in Claude Code, say: `"Audit this codebase for latency issues"`. That's it - no
+key to configure.
 
-Each audit also writes `relay-report.json` into the audited directory. Upload it to the
-[Relay dashboard](https://relay.arclat.com/dashboard) (invited access) for the full
-analytics view.
+Each audit writes `relay-report.json` into the audited directory. Upload it to the
+[Relay dashboard](https://relay.arclat.com/dashboard) for the full analytics view.
 
 ---
 
@@ -69,7 +68,9 @@ analytics view.
 | `get_findings`   | Filters findings from the last audit by severity, type, or verification status.                      |
 | `verify_audit`   | Shows which findings the semantic pass confirmed vs dismissed, with reasons.                         |
 | `apply_fix`      | Applies a fix (`dry_run=true` by default; file path defaults to the finding's file).                 |
-| `usage_status`   | Shows your plan and audits used / remaining this month.                                               |
+
+The last audit is cached at `~/.relay/last-audit.json`, so `get_findings`,
+`verify_audit`, and `apply_fix` keep working after an MCP server restart.
 
 ---
 
@@ -118,25 +119,20 @@ one-line reason either way. The summary counts (`flagged`, `confirmed`, `dismiss
 
 ---
 
-## Usage limits
+## The dashboard
 
-| Plan       | Price     | Limits                                       |
-|------------|-----------|----------------------------------------------|
-| Free       | $0        | 20 audits/month, findings only               |
-| Pro        | $19/mo    | Unlimited audits + apply_fix tool            |
-| Team       | $49/mo    | 5 seats + CI/CD GitHub Action                |
-| Enterprise | $200+/mo  | Custom limits + Slack integration + support  |
+Relay itself is fully local. If you want a visual view of a report, the
+[Relay dashboard](https://relay.arclat.com/dashboard) lets you drag in any
+`relay-report.json` and browse the findings, severity breakdown, and time-lost
+aggregates. The report never leaves your browser - it's parsed client-side.
 
 ---
 
 ## Environment variables
 
-| Variable        | Purpose                                        |
-|-----------------|------------------------------------------------|
-| `RELAY_API_KEY` | Your Relay API key (`rly_...`).                |
-| `RELAY_API_URL` | Override the billing/usage sync endpoint.      |
-
-Legacy `ARCLAT_API_KEY` / `ARCLAT_API_URL` are still read as a fallback.
+| Variable        | Purpose                                                          |
+|-----------------|------------------------------------------------------------------|
+| (none required) | Relay needs no configuration - it runs offline with no API key.  |
 
 ---
 
@@ -144,14 +140,12 @@ Legacy `ARCLAT_API_KEY` / `ARCLAT_API_URL` are still read as a fallback.
 
 ```
 relay-mcp/
-├── mcp_server/          # MCP server (ships as relay-mcp on PyPI)
+├── mcp_server/          # MCP server + CLI (ships as relay-mcp on PyPI)
 │   ├── server.py        # entry point, exposes the MCP tools
 │   ├── cli.py           # `relay` command (scan / verify / report / mcp)
-│   ├── engine/          # audit engine (detectors, scorer, verify, code_parser)
-│   └── usage/           # SQLite-based usage tracker
-├── backend/             # lightweight FastAPI - auth + billing only
-├── frontend/            # Next.js 14 landing page + dashboard
+│   └── engine/          # audit engine (detectors, scorer, verify, code_parser)
 ├── tests/               # end-to-end engine tests
+├── run.sh / run.ps1     # dev runners (install / register / test / serve)
 └── pyproject.toml       # package config for uvx/pip install
 ```
 
@@ -166,12 +160,11 @@ pip install -e ".[dev]"
 # Run the test suite
 pytest
 
-# Run the FastAPI backend
-cd backend && uvicorn app.main:app --reload
-
-# Run the Next.js frontend
-cd frontend && npm run dev
+# Run the audit engine on a directory directly
+relay scan .
 ```
+
+See [RUNNING.md](RUNNING.md) for the full dev workflow.
 
 ---
 
