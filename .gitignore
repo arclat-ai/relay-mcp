@@ -210,6 +210,10 @@ __marimo__/
 temp/
 sample_logs.json
 
+# Relay audit artifacts
+relay-report.json
+audit-*.json
+
 node_modules/
 
 # Next.js

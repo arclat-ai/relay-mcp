@@ -4,12 +4,16 @@ from mcp_server.engine.base_detector import Finding, Span
 
 def _file_of(location: str) -> str:
     """Extract the source file from a finding location, ignoring line/call prefix."""
+    if ".py" not in location:
+        return location                    # abstract location e.g. 'A -> B'
     loc = location.split("@")[-1]          # strip 'requests.get@' style prefix
     return loc.rsplit(":", 1)[0]           # strip trailing ':line' or ':a-b'
 
 
 def _lines_of(location: str) -> List[int]:
     """Extract line numbers from a location's trailing ':NN' or ':a-b'."""
+    if ".py" not in location:
+        return []
     tail = location.split("@")[-1].rsplit(":", 1)
     if len(tail) < 2:
         return []

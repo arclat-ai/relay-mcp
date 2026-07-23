@@ -31,7 +31,8 @@ class UsageSyncRequest(BaseModel):
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _generate_api_key() -> str:
-    return "arc_" + secrets.token_urlsafe(24)
+    # Relay-branded keys; legacy arc_ keys remain valid everywhere.
+    return "rly_" + secrets.token_urlsafe(24)
 
 
 def _current_month() -> str:

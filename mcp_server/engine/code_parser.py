@@ -6,6 +6,7 @@ locations. Analysis is scoped per-function so detectors never group calls
 across unrelated functions or files.
 """
 import ast
+import hashlib
 import uuid
 from pathlib import Path
 from typing import List, Optional
@@ -29,8 +30,25 @@ _LLM_EXCLUDE = ("transcription", "translation", "embedding", "moderation",
 _STREAM_TERMINALS = {"stream", "astream"}
 
 _SYNC_HTTP = {"requests.get", "requests.post", "requests.put", "requests.delete",
-              "requests.patch", "requests.head"}
+              "requests.patch", "requests.head", "requests.request",
+              "urllib.request.urlopen", "urlopen"}
 _SYNC_DB = {"session.execute", "cursor.execute", "collection.find", "conn.execute"}
+# Blocking calls only meaningful inside an async function (in a sync script
+# `time.sleep` is fine; on the event loop it stalls every concurrent task).
+_SYNC_SLEEP = {"time.sleep"}
+_SYNC_SUBPROC = {"subprocess.run", "subprocess.call", "subprocess.check_output",
+                 "subprocess.check_call", "os.system"}
+
+# Per-request client construction: building one of these inside an ordinary
+# function (rather than at startup) pays TLS/connection setup on every call.
+_CLIENT_CTORS = {"OpenAI", "AsyncOpenAI", "Anthropic", "AsyncAnthropic",
+                 "openai.OpenAI", "openai.AsyncOpenAI",
+                 "anthropic.Anthropic", "anthropic.AsyncAnthropic",
+                 "httpx.Client", "httpx.AsyncClient",
+                 "aiohttp.ClientSession", "requests.Session"}
+# Function names where constructing a client is expected (startup / DI paths).
+_INIT_NAME_TOKENS = ("init", "setup", "client", "connect", "start", "boot",
+                     "main", "create", "build", "factory", "session", "lifespan")
 
 # Awaited calls whose ordering matters (side effects / pipeline emits). These are
 # NEVER treated as independent parallelizable work, even if assigned.
@@ -113,6 +131,31 @@ def _resolve_forwarded_stream(func: ast.AST, names: set):
     return resolved
 
 
+def _static_prompt_hash(call: ast.Call) -> Optional[str]:
+    """Hash of a *fully static* LLM call — every arg/kwarg value is a constant
+    (or a structure of constants). Two call sites with the same hash send the
+    same input every time, so the response is cacheable. Calls with variable
+    args get no hash: their runtime inputs differ."""
+    def _const(node: ast.AST) -> bool:
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            return all(_const(e) for e in node.elts)
+        if isinstance(node, ast.Dict):
+            return all(k is not None and _const(k) and _const(v)
+                       for k, v in zip(node.keys, node.values))
+        return False
+
+    if not call.args and not call.keywords:
+        return None
+    if any(not _const(a) for a in call.args):
+        return None
+    if any(kw.arg is None or not _const(kw.value) for kw in call.keywords):
+        return None
+    src = ast.dump(ast.Call(func=ast.Name(id="_"), args=call.args, keywords=call.keywords))
+    return hashlib.md5(src.encode()).hexdigest()[:12]
+
+
 def _names_used(node: ast.AST) -> set:
     """All identifier names referenced (loaded) anywhere under node."""
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
@@ -167,12 +210,22 @@ class CodeParser:
             id(n.value) for n in ast.walk(tree)
             if isinstance(n, ast.Await) and isinstance(n.value, ast.Call)
         }
+        # (start, end, is_async, name) for every function — innermost enclosing
+        # function decides whether a call runs on the event loop.
+        self._funcs = [
+            (n.lineno, getattr(n, "end_lineno", n.lineno),
+             isinstance(n, ast.AsyncFunctionDef), n.name)
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
         spans: List[Span] = []
 
         for node in ast.walk(tree):
             # Synchronous blocking I/O — flagged anywhere.
             if isinstance(node, ast.Call):
                 spans_here, cursor_ms = self._blocking_io(node, cursor_ms)
+                spans.extend(spans_here)
+                spans_here, cursor_ms = self._client_init(node, cursor_ms)
                 spans.extend(spans_here)
 
             # LLM calls + sequential independent work — scoped per function.
@@ -181,6 +234,14 @@ class CodeParser:
                 spans.extend(spans_here)
 
         return spans, cursor_ms
+
+    def _enclosing_func(self, lineno: int):
+        """Innermost (start, end, is_async, name) containing lineno, or None."""
+        best = None
+        for f in self._funcs:
+            if f[0] <= lineno <= f[1] and (best is None or f[0] >= best[0]):
+                best = f
+        return best
 
     def _snippet(self, node: ast.AST) -> str:
         seg = ast.get_source_segment(self._source, node)
@@ -192,23 +253,51 @@ class CodeParser:
             return [], cursor_ms
         call_name = _node_name(node.func)
         line = getattr(node, "lineno", 0)
+        enclosing = self._enclosing_func(line)
+        in_async = bool(enclosing and enclosing[2])
+
+        def emit(span_type: str, duration_ms: int, kind: str):
+            span, cur = _make_span(
+                name=f"{call_name}@{self._file}:{line}",
+                span_type=span_type, cursor_ms=cursor_ms, duration_ms=duration_ms,
+                metadata={"async": False, "kind": kind, "in_async": in_async,
+                          "code": self._snippet(node),
+                          "file": self._file, "line": line},
+            )
+            return [span], cur
+
         if call_name in _SYNC_HTTP:
-            span, cursor_ms = _make_span(
-                name=f"{call_name}@{self._file}:{line}",
-                span_type="api_call", cursor_ms=cursor_ms, duration_ms=500,
-                metadata={"async": False, "code": self._snippet(node),
-                          "file": self._file, "line": line},
-            )
-            return [span], cursor_ms
+            return emit("api_call", 500, "http")
         if call_name in _SYNC_DB:
-            span, cursor_ms = _make_span(
-                name=f"{call_name}@{self._file}:{line}",
-                span_type="db_query", cursor_ms=cursor_ms, duration_ms=200,
-                metadata={"async": False, "code": self._snippet(node),
-                          "file": self._file, "line": line},
-            )
-            return [span], cursor_ms
+            return emit("db_query", 200, "db")
+        # sleep / subprocess are only latency bugs when they run on the event
+        # loop — in plain sync code they're normal, so don't flag them there.
+        if in_async and call_name in _SYNC_SLEEP:
+            return emit("api_call", 1000, "sleep")
+        if in_async and call_name in _SYNC_SUBPROC:
+            return emit("api_call", 800, "subprocess")
         return [], cursor_ms
+
+    def _client_init(self, node: ast.Call, cursor_ms: int):
+        """Flag API-client construction inside an ordinary (per-request)
+        function — connection/TLS setup should happen once at startup."""
+        call_name = _node_name(node.func)
+        if call_name not in _CLIENT_CTORS:
+            return [], cursor_ms
+        line = getattr(node, "lineno", 0)
+        enclosing = self._enclosing_func(line)
+        if enclosing is None:
+            return [], cursor_ms          # module level = startup, fine
+        fname = enclosing[3].lower()
+        if any(tok in fname for tok in _INIT_NAME_TOKENS):
+            return [], cursor_ms          # an init/factory path, expected
+        span, cursor_ms = _make_span(
+            name=f"{call_name}@{self._file}:{line}",
+            span_type="client_init", cursor_ms=cursor_ms, duration_ms=300,
+            metadata={"code": self._snippet(node), "ctor": call_name,
+                      "func": enclosing[3], "file": self._file, "line": line},
+        )
+        return [span], cursor_ms
 
     def _scan_function(self, func: ast.AST, cursor_ms: int):
         """Emit LLM-call spans and groups of genuinely-independent awaited calls."""
@@ -234,6 +323,7 @@ class CodeParser:
                         span_type="llm_call", cursor_ms=cursor_ms,
                         duration_ms=500 if streaming else 3000,
                         metadata={"streaming": streaming, "streaming_unknown": unknown,
+                                  "prompt_hash": _static_prompt_hash(n.value),
                                   "code": self._snippet(n), "file": self._file,
                                   "line": line, "call": call_name},
                     )

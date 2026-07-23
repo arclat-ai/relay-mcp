@@ -5,6 +5,7 @@ from typing import List
 from mcp_server.engine.base_detector import Span
 from mcp_server.engine.code_parser import CodeParser
 from mcp_server.engine.scorer import rank_findings, summarize_audit, dedupe_findings
+from mcp_server.engine.verify import verify_findings
 from mcp_server.engine.detectors.sync_output import SyncOutputDetector
 from mcp_server.engine.detectors.sequential_tools import SequentialToolDetector
 from mcp_server.engine.detectors.cache_miss import CacheMissDetector
@@ -13,7 +14,7 @@ from mcp_server.engine.detectors.cold_start import ColdStartDetector
 from mcp_server.engine.detectors.prefetch import PrefetchDetector
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 class AuditResult:
@@ -22,6 +23,7 @@ class AuditResult:
         self.summary = summary
         self.target = target
         self.files_scanned = files_scanned
+        self._verified = None  # cached (findings_with_verdicts, verify_summary)
 
     def _finding_dict(self, f):
         d = asdict(f)
@@ -34,16 +36,35 @@ class AuditResult:
         }
         return d
 
+    def _verify(self):
+        """Run the semantic verify pass once and nest each verdict under a
+        `verification` key on the finding dict."""
+        if self._verified is None:
+            raw = [self._finding_dict(b) for b in self.bottlenecks]
+            v = verify_findings(raw, self.target or None)
+            annotated = []
+            for g in v["findings"]:
+                g["verification"] = {
+                    "status": g.pop("status"),
+                    "reason": g.pop("reason"),
+                    "impact": g.pop("impact"),
+                }
+                annotated.append(g)
+            self._verified = (annotated, v["summary"])
+        return self._verified
+
     def to_dict(self):
+        findings, verify_summary = self._verify()
         return {
             "schema_version": SCHEMA_VERSION,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "target": self.target,
             "files_scanned": self.files_scanned,
             "summary": self.summary,
-            "findings": [self._finding_dict(b) for b in self.bottlenecks],
+            "verification": verify_summary,
+            "findings": findings,
             # Backwards-compatible alias for the current MCP server renderer.
-            "bottlenecks": [self._finding_dict(b) for b in self.bottlenecks],
+            "bottlenecks": findings,
         }
 
 

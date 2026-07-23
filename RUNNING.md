@@ -1,4 +1,4 @@
-# Running Arclat
+# Running Relay
 
 ## What's in this repo
 
@@ -19,7 +19,7 @@
 pip install -e .
 ```
 
-This installs the `arclat-mcp` command via `pyproject.toml`.
+This installs the `relay-mcp` command via `pyproject.toml`.
 
 ### Add to Claude Code
 
@@ -28,10 +28,10 @@ Edit `~/.claude/claude_code_config.json`:
 ```json
 {
   "mcpServers": {
-    "arclat": {
-      "command": "arclat-mcp",
+    "relay": {
+      "command": "relay-mcp",
       "env": {
-        "ARCLAT_API_KEY": "your_key_here"
+        "RELAY_API_KEY": "your_key_here"
       }
     }
   }
@@ -42,11 +42,11 @@ For production (PyPI install):
 ```json
 {
   "mcpServers": {
-    "arclat": {
+    "relay": {
       "command": "uvx",
-      "args": ["arclat-mcp"],
+      "args": ["relay-mcp"],
       "env": {
-        "ARCLAT_API_KEY": "your_key_here"
+        "RELAY_API_KEY": "your_key_here"
       }
     }
   }
@@ -65,10 +65,10 @@ Restart Claude Code, then say: `"Audit this codebase for latency issues"`
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ARCLAT_API_KEY` | — | Your API key (set in MCP config) |
-| `ARCLAT_API_URL` | `https://api.arclat.com` | Backend URL for usage sync |
+| `RELAY_API_KEY` | — | Your API key (set in MCP config) |
+| `RELAY_API_URL` | `https://api.arclat.com` | Backend URL for usage sync |
 
-Usage data is stored locally at `~/.arclat/usage.db` (SQLite) and synced to the backend every 10 audits.
+Usage data is stored locally at `~/.relay/usage.db` (SQLite) and synced to the backend every 10 audits.
 
 ---
 
@@ -184,7 +184,7 @@ The MCP server runs as a subprocess managed by Claude Code — you don't start i
 
 ---
 
-## Publishing to PyPI (for `uvx arclat-mcp`)
+## Publishing to PyPI (for `uvx relay-mcp`)
 
 ```bash
 pip install build twine
@@ -192,4 +192,4 @@ python -m build
 twine upload dist/*
 ```
 
-Package name: `arclat-mcp` (defined in `pyproject.toml`).
+Package name: `relay-mcp` (defined in `pyproject.toml`).

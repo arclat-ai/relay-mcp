@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Settings:
-    API_BASE_URL: str = os.getenv("ARCLAT_API_URL", "https://api.arclat.com")
-    API_KEY: str = os.getenv("ARCLAT_API_KEY", "")
+    API_BASE_URL: str = os.getenv("RELAY_API_URL", os.getenv("ARCLAT_API_URL", "https://api.arclat.com"))
+    API_KEY: str = os.getenv("RELAY_API_KEY", os.getenv("ARCLAT_API_KEY", ""))
 
 
 settings = Settings()

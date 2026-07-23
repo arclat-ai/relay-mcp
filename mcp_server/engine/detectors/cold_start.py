@@ -1,25 +1,35 @@
-﻿from typing import List
+from typing import List
 from mcp_server.engine.base_detector import BaseDetector, Span, Finding
 
 
 class ColdStartDetector(BaseDetector):
+    """Flags API clients constructed inside per-request functions. Each
+    construction pays connection/TLS setup that should happen once at startup."""
+
     def detect(self, timeline: List[Span]) -> List[Finding]:
-        agent_loops = [s for s in timeline if s.span_type == "agent_loop"]
-        if not agent_loops:
-            return []
-        first = agent_loops[0]
-        if first.duration_ms > 500 and any(kw in first.name.lower() for kw in ("init", "setup", "connect")):
-            return [Finding(
+        findings = []
+        for span in timeline:
+            if span.span_type != "client_init":
+                continue
+            ctor = span.metadata.get("ctor", "client")
+            func = span.metadata.get("func", "this function")
+            code = span.metadata.get("code", "")
+            findings.append(Finding(
                 type="cold_start",
-                severity="low",
-                title="Implement connection pooling and warm starts",
-                description="Pre-initialize model clients, DB connections, and HTTP sessions at startup instead of per-request.",
-                time_lost_ms=first.duration_ms - 50,
-                location=first.name,
+                severity="medium",
+                title="Reuse API clients across requests",
+                description=(
+                    f"`{ctor}(...)` is constructed inside `{func}()`, so every call "
+                    "pays client setup (TLS handshake, connection pool creation). "
+                    "Build the client once at startup (module level, lifespan hook, "
+                    "or __init__) and reuse it."
+                ),
+                time_lost_ms=span.duration_ms,
+                location=span.name,
                 rank=0,
-                code_before="",
-                code_after="",
-                effort="medium",
-                impact="low",
-            )]
-        return []
+                code_before=code,
+                code_after=f"# at startup / __init__:\nself.client = {code}\n# in {func}(): reuse self.client",
+                effort="low",
+                impact="medium",
+            ))
+        return findings

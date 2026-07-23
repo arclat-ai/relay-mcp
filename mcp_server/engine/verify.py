@@ -217,7 +217,11 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
                 return _d("structured/JSON output — not streamable")
             if "yield" in low:
                 return _d("streaming set upstream — not the returned path")
-        return _d("non-streaming helper — unconfirmed on hot path")
+        # No dismissal evidence. If streaming is *known* to be off (severity
+        # high, not a **kwargs guess), keep it; a guess stays dismissed.
+        if str(finding.get("severity", "")).lower() == "high":
+            return _c("full completion awaited before first token", impact="medium")
+        return _d("streaming state unknown (**kwargs) — unconfirmed")
 
     if ftype == "sequential_tools":
         terminals = _awaited_terminals(finding.get("code_before", ""))
@@ -233,6 +237,18 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
         if cheap:
             return _d(f"one branch ({cheap}) is in-memory — nothing to parallelize")
         return _c("independent awaits — gather-able", impact="low")
+
+    # ---- cold_start (per-request client construction) ---------------------
+    if ftype == "cold_start":
+        return _c("client constructed per call — hoist to startup", impact="medium")
+
+    # ---- cache_miss (repeated fully-static LLM call) ----------------------
+    if ftype == "cache_miss":
+        return _c("identical static input at multiple sites — cacheable", impact="medium")
+
+    # ---- no_prefetch ------------------------------------------------------
+    if ftype == "no_prefetch":
+        return _c("stable call pair — speculative prefetch possible", impact="low")
 
     return _c("no dismissal rule matched", impact="unknown")
 

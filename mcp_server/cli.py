@@ -3,7 +3,11 @@
 
     relay scan   <dir>     structural pass — flag candidate latency patterns
     relay verify <dir>     semantic pass  — trace each flag, keep only real gaps
+    relay report <dir>     write relay-report.json for the dashboard
     relay mcp              run the MCP server (same as `relay-mcp`)
+
+`scan` and `verify` accept --json for machine-readable output.
+`verify` accepts --fail-on {none,high,any} to exit non-zero as a CI gate.
 
 `scan` and `verify` share the AST engine used by the MCP tools, so the CLI and
 the agent-facing tools never diverge.
@@ -11,12 +15,12 @@ the agent-facing tools never diverge.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
 
 from mcp_server.engine.engine import AuditEngine
-from mcp_server.engine.verify import verify_findings
 
 # Prefer UTF-8 so the marks/arrows render; fall back to ASCII on legacy consoles.
 try:
@@ -56,6 +60,9 @@ def _scan(target: str):
 def cmd_scan(args) -> int:
     rd = _scan(args.directory)
     b = rd["bottlenecks"]
+    if getattr(args, "json", False):
+        print(json.dumps(rd, indent=2))
+        return 0
     print(f"{GREEN('$')} {BOLD('relay scan')} {args.directory}")
     print(DIM(f"scanning {rd['files_scanned']} files{ELL}\n"))
     from collections import Counter
@@ -69,8 +76,15 @@ def cmd_scan(args) -> int:
 
 def cmd_verify(args) -> int:
     rd = _scan(args.directory)
-    v = verify_findings(rd["bottlenecks"], args.directory)
+    # The engine already ran the verify pass — verdicts are nested per finding.
+    v = {
+        "findings": [dict(f, **f["verification"]) for f in rd["bottlenecks"]],
+        "summary": rd["verification"],
+    }
     s = v["summary"]
+    if getattr(args, "json", False):
+        print(json.dumps(rd, indent=2))
+        return 0
     print(f"{GREEN('$')} {BOLD('relay verify')} {args.directory}")
     print(DIM(f"tracing each flag against runtime{ELL}\n"))
     for g in v["findings"]:
@@ -92,6 +106,30 @@ def cmd_verify(args) -> int:
         head = f"{s['confirmed']} confirmed ({s['confirmed_high_impact']} high-impact)"
         note = DIM(f"{dismissed} of {flagged} dismissed")
         print(f"  {CYAN('=')} {BOLD(head)}   {note}")
+
+    # CI gate: exit non-zero when confirmed gaps remain, so `relay verify` can
+    # fail a pipeline. Default `none` keeps the command informational.
+    fail_on = getattr(args, "fail_on", "none")
+    if fail_on == "high" and s["confirmed_high_impact"] > 0:
+        return 1
+    if fail_on == "any" and s["confirmed"] > 0:
+        return 1
+    return 0
+
+
+def cmd_report(args) -> int:
+    rd = _scan(args.directory)
+    rd["generator"] = "relay-cli"
+    rd["product"] = "relay"
+    out = args.output or os.path.join(args.directory, "relay-report.json")
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump(rd, fh, indent=2)
+    s = rd["verification"]
+    print(f"{GREEN('$')} {BOLD('relay report')} {args.directory}")
+    print(f"  {rd['summary']['total_bottlenecks']} findings "
+          f"({s['confirmed']} confirmed, {s['dismissed']} dismissed)")
+    print(f"  {GREEN(MARK_OK)} wrote {out}")
+    print(DIM("  upload it at https://relay.arclat.com/dashboard"))
     return 0
 
 
@@ -107,17 +145,30 @@ def main() -> int:
 
     ps = sub.add_parser("scan", help="flag candidate latency patterns")
     ps.add_argument("directory")
+    ps.add_argument("--json", action="store_true", help="print the full report as JSON")
     ps.set_defaults(func=cmd_scan)
 
     pv = sub.add_parser("verify", help="trace flags; keep only real gaps")
     pv.add_argument("directory")
+    pv.add_argument("--json", action="store_true", help="print the full report as JSON")
+    pv.add_argument(
+        "--fail-on",
+        choices=("none", "high", "any"),
+        default="none",
+        help="exit non-zero when confirmed gaps remain (CI gate; default: none)",
+    )
     pv.set_defaults(func=cmd_verify)
+
+    pr = sub.add_parser("report", help="write relay-report.json for the dashboard")
+    pr.add_argument("directory")
+    pr.add_argument("-o", "--output", default="", help="output path (default: <dir>/relay-report.json)")
+    pr.set_defaults(func=cmd_report)
 
     pm = sub.add_parser("mcp", help="run the MCP server")
     pm.set_defaults(func=cmd_mcp)
 
     args = p.parse_args()
-    if args.cmd in ("scan", "verify") and not os.path.isdir(args.directory):
+    if args.cmd in ("scan", "verify", "report") and not os.path.isdir(args.directory):
         print(RED(f"not a directory: {args.directory}"), file=sys.stderr)
         return 2
     return args.func(args)
