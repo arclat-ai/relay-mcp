@@ -176,5 +176,4 @@ cd frontend && npm run dev
 ---
 
 ## License
-
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE)
