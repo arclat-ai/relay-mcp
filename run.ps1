@@ -7,9 +7,6 @@
     .\run.ps1 test [DIR]     Run the audit engine directly on DIR (default: current dir)
     .\run.ps1 serve          Start the MCP server in the foreground (stdio; for debugging)
     .\run.ps1 all            install + register
-
-  Env:
-    RELAY_API_KEY   API key used for register/test/serve (optional for local test)
 #>
 
 param(
@@ -44,18 +41,11 @@ function Register-Mcp {
         $cfg | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([PSCustomObject]@{}) -Force
     }
 
-    $key = if ($env:RELAY_API_KEY) { $env:RELAY_API_KEY } else { "your_key_here" }
-    $entry = [PSCustomObject]@{
-        command = "relay-mcp"
-        env     = [PSCustomObject]@{ RELAY_API_KEY = $key }
-    }
+    $entry = [PSCustomObject]@{ command = "relay-mcp" }
     $cfg.mcpServers | Add-Member -NotePropertyName relay -NotePropertyValue $entry -Force
 
     $cfg | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigPath -Encoding utf8
     Write-Host "Done. Restart Claude Code, then say: 'Audit this codebase for latency issues'" -ForegroundColor Green
-    if ($key -eq "your_key_here") {
-        Write-Host "NOTE: set RELAY_API_KEY and re-run, or edit the key in $ConfigPath" -ForegroundColor Yellow
-    }
 }
 
 function Test-Audit {

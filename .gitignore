@@ -214,12 +214,4 @@ sample_logs.json
 relay-report.json
 audit-*.json
 
-node_modules/
-
-# Next.js
-frontend/.next/
-frontend/next-env.d.ts
-frontend/.env.local
-frontend/.env*.local
-
 samples/

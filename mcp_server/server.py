@@ -2,17 +2,15 @@
 Relay MCP Server
 Run via: uvx relay-mcp  (or: python -m mcp_server.server)
 
-Relay is the latency-auditor MCP, a product of the Arclat studio.
+Relay is the open-source latency-auditor MCP, a product of the Arclat studio.
 """
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.engine.engine import AuditEngine
-from mcp_server.usage.tracker import validate_and_check, increment, get_usage
 
 mcp = FastMCP("relay")
 
@@ -111,7 +109,7 @@ def _write_report(report: dict, directory: str) -> Path:
 
 
 @mcp.tool()
-def audit_codebase(directory: str, api_key: str = "", write_report: bool = True) -> str:
+def audit_codebase(directory: str, write_report: bool = True) -> str:
     """
     Audit an AI agent codebase for latency bottlenecks.
     Reads Python files in the given directory and returns ranked findings with
@@ -120,24 +118,14 @@ def audit_codebase(directory: str, api_key: str = "", write_report: bool = True)
 
     Args:
         directory: Absolute path to the codebase directory to audit.
-        api_key: Your Relay API key (rly_...). Get one at https://relay.arclat.com
         write_report: Write relay-report.json into the audited directory (default True).
     """
-    # Fall back to env var if not passed directly
-    key = api_key or os.getenv("RELAY_API_KEY", "") or os.getenv("ARCLAT_API_KEY", "")
-
-    allowed, reason = validate_and_check(key)
-    if not allowed:
-        return f"❌ {reason}"
-
     if not Path(directory).is_dir():
         return f"❌ Not a directory: `{directory}`. Pass an absolute path to the codebase root."
 
     result = AuditEngine().run_on_codebase(directory)
     report = result.to_dict()
     _save_last(report)
-
-    increment(key)
 
     if result.files_scanned == 0:
         return (
@@ -225,27 +213,6 @@ def verify_audit() -> str:
         mark = "✓" if ver["status"] == "confirmed" else "✗"
         lines.append(f"- {mark} **[{f['rank']}] {f['title']}** - {ver['reason']}  \n  `{loc_str}`")
     return "\n".join(lines)
-
-
-@mcp.tool()
-def usage_status(api_key: str = "") -> str:
-    """
-    Show your Relay plan and how many audits you have used / have left this month.
-
-    Args:
-        api_key: Your Relay API key. Falls back to RELAY_API_KEY env var.
-    """
-    key = api_key or os.getenv("RELAY_API_KEY", "") or os.getenv("ARCLAT_API_KEY", "")
-    if not key or not (key.startswith("rly_") or key.startswith("arc_")):
-        return "❌ Invalid API key format. Get your key at https://relay.arclat.com"
-    u = get_usage(key)
-    if u["plan"] == "free":
-        return (
-            f"**Plan:** free · **Month:** {u['month']}\n"
-            f"**Audits used:** {u['count']}/{u['limit']} · **Remaining:** {u['remaining']}\n"
-            f"Upgrade for unlimited audits at https://relay.arclat.com"
-        )
-    return f"**Plan:** {u['plan']} (unlimited) · **Month:** {u['month']} · **Audits used:** {u['count']}"
 
 
 @mcp.tool()

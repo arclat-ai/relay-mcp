@@ -8,9 +8,6 @@
 #   ./run.sh test [DIR]     Run the audit engine directly on DIR (default: .)
 #   ./run.sh serve          Start the MCP server in the foreground (stdio; debug)
 #   ./run.sh all            install + register
-#
-# Env:
-#   RELAY_API_KEY   API key used for register/test/serve
 
 set -euo pipefail
 
@@ -26,26 +23,21 @@ install_pkg() {
 register_mcp() {
   echo "==> Registering 'relay' in $CONFIG"
   mkdir -p "$(dirname "$CONFIG")"
-  local key="${RELAY_API_KEY:-your_key_here}"
   [ -f "$CONFIG" ] || echo '{}' > "$CONFIG"
 
-  RELAY_KEY="$key" CONFIG="$CONFIG" "$PY" - <<'PYEOF'
+  CONFIG="$CONFIG" "$PY" - <<'PYEOF'
 import json, os
 cfg_path = os.environ["CONFIG"]
 with open(cfg_path) as f:
     cfg = json.load(f) or {}
 cfg.setdefault("mcpServers", {})
-cfg["mcpServers"]["relay"] = {
-    "command": "relay-mcp",
-    "env": {"RELAY_API_KEY": os.environ["RELAY_KEY"]},
-}
+cfg["mcpServers"]["relay"] = {"command": "relay-mcp"}
 with open(cfg_path, "w") as f:
     json.dump(cfg, f, indent=2)
 print("wrote", cfg_path)
 PYEOF
 
   echo "Done. Restart Claude Code, then say: 'Audit this codebase for latency issues'"
-  [ "$key" = "your_key_here" ] && echo "NOTE: set RELAY_API_KEY and re-run, or edit the key in $CONFIG"
 }
 
 test_audit() {
