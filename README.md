@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/relay-logo-dark.svg">
-  <img src="assets/relay-logo-light.svg" alt="Relay" width="212">
-</picture>
+<img src="assets/relay-logo.svg" alt="Relay" width="254">
 
 ### Find the latency in your AI agent, before your users do.
 
@@ -15,9 +12,14 @@ directly from Claude Code.
 **No account. No API key. No backend.** It runs entirely on your machine.
 
 [![CI](https://github.com/arclat-ai/relay-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/arclat-ai/relay-mcp/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+<!-- After the first PyPI release, swap the two badges above for these live ones:
 [![PyPI](https://img.shields.io/pypi/v/relay-mcp.svg)](https://pypi.org/project/relay-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/relay-mcp.svg)](https://pypi.org/project/relay-mcp/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+-->
+
 
 [Quickstart](#quickstart) · [MCP tools](#mcp-tools) · [CLI](#cli) · [What it detects](#what-it-detects) · [Contributing](CONTRIBUTING.md)
 
