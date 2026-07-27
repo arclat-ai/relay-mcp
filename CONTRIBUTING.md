@@ -1,7 +1,7 @@
 # Contributing to Relay
 
-Thanks for taking the time. Relay is small on purpose — one AST engine, six detectors,
-one verification pass — so a focused PR is easy to review and easy to merge.
+Thanks for taking the time. Relay is small on purpose - one AST engine, six detectors,
+one verification pass - so a focused PR is easy to review and easy to merge.
 
 By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
@@ -38,7 +38,7 @@ the [bug template](.github/ISSUE_TEMPLATE/bug_report.yml).
 
 **False positives.** These matter more than missed detections. Relay's value is that its
 output is worth reading; a detector that cries wolf is worse than one that stays quiet.
-If you find a pattern that gets flagged but is genuinely fine, that's a bug — file it.
+If you find a pattern that gets flagged but is genuinely fine, that's a bug - file it.
 
 **New detectors.** Very welcome, with one condition: a detector must be able to explain
 itself in the verification pass. If you cannot write the one-line reason a finding would
@@ -50,7 +50,7 @@ be dismissed, the detector is not ready.
    `BaseDetector` and implements `detect(self, timeline: list[Span]) -> list[Finding]`.
    `Span` and `Finding` both live in
    [`mcp_server/engine/base_detector.py`](mcp_server/engine/base_detector.py).
-2. Populate the `Finding` fully — `time_lost_ms`, `impact`, `effort`, `code_before`, and
+2. Populate the `Finding` fully - `time_lost_ms`, `impact`, `effort`, `code_before`, and
    `code_after` all feed the scorer and the report, and an empty one produces a useless
    finding.
 3. Register it in `_DETECTORS` in
@@ -63,12 +63,12 @@ be dismissed, the detector is not ready.
 ## Style
 
 - No new runtime dependencies. Relay ships with `mcp` and nothing else, and that is a
-  feature — it must stay safe to run on a stranger's codebase offline.
+  feature - it must stay safe to run on a stranger's codebase offline.
 - Match the surrounding code: type hints on public functions, `from __future__ import
   annotations` where the module already uses it, comments only where the *why* is not
   obvious from the *what*.
 - Keep engine output stable. `schema_version` in `engine.py` exists so the dashboard can
-  read older reports — bump it if you change the report shape.
+  read older reports - bump it if you change the report shape.
 
 ## Commits and PRs
 
@@ -85,5 +85,5 @@ be dismissed, the detector is not ready.
 
 ## Questions
 
-Open a [discussion or issue](https://github.com/arclat-ai/relay-mcp/issues) — a question
+Open a [discussion or issue](https://github.com/arclat-ai/relay-mcp/issues) - a question
 that took you an hour to answer is a documentation bug worth filing.

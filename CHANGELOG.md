@@ -21,7 +21,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.3.0]
 
 ### Added
-- `relay verify --fail-on {none,high,any}` as a CI gate — exits non-zero when a confirmed
+- `relay verify --fail-on {none,high,any}` as a CI gate - exits non-zero when a confirmed
   gap remains.
 - MIT license, GitHub Actions CI on Python 3.11 and 3.12, and a `dev` extra.
 
@@ -32,7 +32,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.2.0]
 
 ### Added
-- Semantic verification pass — every structural finding is re-read in context and either
+- Semantic verification pass - every structural finding is re-read in context and either
   confirmed or dismissed with a one-line reason.
 - The `relay` CLI (`scan` / `verify` / `report` / `mcp`), sharing the engine that backs
   the MCP tools.

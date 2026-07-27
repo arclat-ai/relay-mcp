@@ -44,6 +44,6 @@ Relay is a local, offline tool. It is worth being explicit about what that means
   disk. It defaults to a dry run for that reason. Review diffs before writing, and run
   agents against version-controlled checkouts.
 
-Anything that breaks one of the guarantees above — a path traversal that writes outside
-the target directory, code execution during parsing, an unexpected network call — is in
+Anything that breaks one of the guarantees above - a path traversal that writes outside
+the target directory, code execution during parsing, an unexpected network call - is in
 scope and we want to hear about it.

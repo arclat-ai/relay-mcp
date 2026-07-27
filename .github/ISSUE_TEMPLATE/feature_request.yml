@@ -26,7 +26,7 @@ body:
       description: >
         Every detector must be able to explain itself. What is the one-line reason a
         finding of this kind would be a false positive?
-      placeholder: "Dismissed when the two awaits share a variable — they are data-dependent."
+      placeholder: "Dismissed when the two awaits share a variable - they are data-dependent."
 
   - type: textarea
     id: alternatives

@@ -1,5 +1,5 @@
 <!--
-Thanks for the PR. Keep it to one logical change — a detector plus a refactor is two PRs.
+Thanks for the PR. Keep it to one logical change - a detector plus a refactor is two PRs.
 -->
 
 ## What this changes

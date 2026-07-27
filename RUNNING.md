@@ -90,7 +90,7 @@ git push --tags
 ```
 
 The [`release` workflow](.github/workflows/release.yml) builds the distribution and
-publishes it to PyPI via Trusted Publishing — no API token is stored in the repo.
+publishes it to PyPI via Trusted Publishing - no API token is stored in the repo.
 
 To build locally without publishing:
 

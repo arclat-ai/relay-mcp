@@ -67,15 +67,15 @@ Then, in Claude Code, just say:
 
 > Audit this codebase for latency issues
 
-That's it — there is no key to configure.
+That's it - there is no key to configure.
 
 ### As a CLI
 
 ```bash
 pip install relay-mcp     # or: uv tool install relay-mcp
 
-relay scan   .            # structural pass — candidate latency patterns
-relay verify .            # semantic pass  — only the confirmed gaps
+relay scan   .            # structural pass - candidate latency patterns
+relay verify .            # semantic pass  - only the confirmed gaps
 relay report .            # write relay-report.json
 ```
 
@@ -90,7 +90,7 @@ Requires Python 3.11+.
   forwarding.
 - **Six latency detectors.** Streaming gaps, sequential tool calls, cache misses,
   blocking I/O in async code, per-request client construction, and prefetch
-  opportunities — see [What it detects](#what-it-detects).
+  opportunities - see [What it detects](#what-it-detects).
 - **Verification pass.** Every candidate is re-read in context and either confirmed as a
   real gap or dismissed as a false positive, each with a one-line reason.
 - **Impact ranking.** Findings are scored and sorted so the highest-impact fixes surface
@@ -102,7 +102,7 @@ Requires Python 3.11+.
   gap remains, so it can fail a pipeline.
 - **Dashboard reports.** Each audit writes a `relay-report.json` you can drop into the
   [Relay dashboard](https://relay.arclat.com/dashboard) for a visual view.
-- **Essentially no dependencies.** Just the `mcp` package — no network calls, no
+- **Essentially no dependencies.** Just the `mcp` package - no network calls, no
   telemetry, nothing leaves your machine.
 - **Persistent state.** The last audit is cached at `~/.relay/last-audit.json`, so
   `get_findings`, `verify_audit`, and `apply_fix` keep working across MCP restarts.
@@ -126,8 +126,8 @@ working after an MCP server restart.
 ## CLI
 
 ```bash
-relay scan   <dir>          # structural pass — flag candidate latency patterns
-relay verify <dir>          # semantic pass  — keep only confirmed gaps
+relay scan   <dir>          # structural pass - flag candidate latency patterns
+relay verify <dir>          # semantic pass  - keep only confirmed gaps
 relay report <dir> [-o f]   # write relay-report.json for the dashboard
 relay mcp                   # run the MCP server (same as relay-mcp)
 ```
@@ -164,8 +164,9 @@ noisy structural match will not break your build.
 ### The verification pass
 
 Every finding is re-read in context and either **confirmed** as a real latency gap or
-**dismissed** as a false positive, with a one-line reason either way — for example
-*"one branch is in-memory"* or *"JSON — not streamable"*. The summary counts
+**dismissed** as a false positive, with a one-line reason either way - for example
+*"one branch (lookup) is in-memory - nothing to parallelize"* or
+*"structured/JSON output - not streamable"*. The summary counts
 (`flagged`, `confirmed`, `dismissed`, `confirmed_high_impact`) drive both the CLI output
 and the `--fail-on` CI gate.
 
@@ -178,7 +179,7 @@ This is the difference between a linter you mute after a week and one you keep i
 Relay itself is fully local. If you want a visual view of a report, the
 [Relay dashboard](https://relay.arclat.com/dashboard) lets you drag in any
 `relay-report.json` and browse findings, severity breakdown, and time-lost aggregates.
-The report never leaves your browser — it is parsed client-side.
+The report never leaves your browser - it is parsed client-side.
 
 ---
 
@@ -221,10 +222,10 @@ See [RUNNING.md](RUNNING.md) for the full dev workflow and
 
 ## Project
 
-- **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Code of conduct** — [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- **Security policy** — [SECURITY.md](SECURITY.md)
-- **Changelog** — [CHANGELOG.md](CHANGELOG.md)
+- **Contributing** - [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Code of conduct** - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Security policy** - [SECURITY.md](SECURITY.md)
+- **Changelog** - [CHANGELOG.md](CHANGELOG.md)
 
 Relay is a product of the **Arclat** studio. Learn more at
 [relay.arclat.com](https://relay.arclat.com).
