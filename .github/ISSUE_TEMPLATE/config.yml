@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/arclat-ai/relay-mcp/security/advisories/new
+    about: Report security issues privately — please do not open a public issue.
+  - name: Relay dashboard
+    url: https://relay.arclat.com/dashboard
+    about: Drop in a relay-report.json for a visual view of an audit.

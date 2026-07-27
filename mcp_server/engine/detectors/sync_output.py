@@ -1,9 +1,9 @@
-﻿from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 
 class SyncOutputDetector(BaseDetector):
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         findings = []
         for span in timeline:
             if span.span_type == "llm_call" and span.duration_ms > 2000:

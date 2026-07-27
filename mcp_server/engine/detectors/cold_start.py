@@ -1,12 +1,12 @@
-from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 
 class ColdStartDetector(BaseDetector):
     """Flags API clients constructed inside per-request functions. Each
     construction pays connection/TLS setup that should happen once at startup."""
 
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         findings = []
         for span in timeline:
             if span.span_type != "client_init":

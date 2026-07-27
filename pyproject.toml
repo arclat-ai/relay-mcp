@@ -5,17 +5,51 @@ build-backend = "hatchling.build"
 [project]
 name = "relay-mcp"
 version = "0.3.0"
-description = "Relay - AI agent latency auditor as an MCP server (an Arclat product)"
+description = "Relay - AI agent latency auditor as an MCP server and CLI (an Arclat product)"
+readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Abdur-Rafay", email = "abdur@lythe.ai" }]
+keywords = [
+    "mcp",
+    "mcp-server",
+    "latency",
+    "ai-agents",
+    "voice-agents",
+    "static-analysis",
+    "ast",
+    "claude-code",
+    "llm",
+    "performance",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "mcp>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://relay.arclat.com"
+Repository = "https://github.com/arclat-ai/relay-mcp"
+Issues = "https://github.com/arclat-ai/relay-mcp/issues"
+Changelog = "https://github.com/arclat-ai/relay-mcp/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "ruff>=0.6.0",
 ]
 
 [project.scripts]
@@ -25,5 +59,20 @@ relay-mcp = "mcp_server.server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_server"]
 
+[tool.hatch.build.targets.sdist]
+include = ["mcp_server", "tests", "README.md", "LICENSE", "CHANGELOG.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # line length is enforced by the formatter, not the linter
+    "E731",   # the CLI uses lambdas as tiny ANSI colour helpers on purpose
+    "B008",   # MCP tool defaults
+]

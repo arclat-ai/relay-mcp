@@ -1,5 +1,5 @@
-from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 _KIND_FIX = {
     "http": ("await client.get(...)  # use httpx.AsyncClient",
@@ -18,7 +18,7 @@ _KIND_FIX = {
 
 
 class BlockingIODetector(BaseDetector):
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         findings = []
         for span in timeline:
             if span.span_type in ("db_query", "api_call"):

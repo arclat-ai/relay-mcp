@@ -5,7 +5,7 @@ Run via: uvx relay-mcp  (or: python -m mcp_server.server)
 Relay is the open-source latency-auditor MCP, a product of the Arclat studio.
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -95,7 +95,7 @@ def _write_report(report: dict, directory: str) -> Path:
     if not out_dir.is_dir():
         out_dir = Path.cwd()
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     latest = out_dir / "relay-report.json"
     history = out_dir / f"relay-report-{stamp}.json"
 

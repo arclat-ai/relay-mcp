@@ -31,7 +31,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 _SKIP_DIRS = {"venv", ".venv", "__pycache__", ".git", "node_modules", "tests",
               "test", "examples", "docs", ".mypy_cache"}
@@ -66,7 +66,7 @@ def _terminal(call_name: str) -> str:
     return call_name.rsplit(".", 1)[-1].rstrip("(") if call_name else ""
 
 
-def _strip_docstring(body: List[ast.stmt]) -> List[ast.stmt]:
+def _strip_docstring(body: list[ast.stmt]) -> list[ast.stmt]:
     if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) \
             and isinstance(body[0].value.value, str):
         return body[1:]
@@ -106,7 +106,7 @@ def _classify_def(node) -> str:
     return CHEAP
 
 
-def _enclosing_function(tree: ast.AST, lineno: int) -> Optional[ast.AST]:
+def _enclosing_function(tree: ast.AST, lineno: int) -> ast.AST | None:
     best = None
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -142,8 +142,8 @@ class _DefIndex:
     scanned codebase. IO dominates (if any definition does I/O, treat the name
     as I/O); otherwise CHEAP if any concrete definition is cheap; else UNKNOWN."""
 
-    def __init__(self, target_dir: Optional[str]):
-        self._cls: Dict[str, str] = {}
+    def __init__(self, target_dir: str | None):
+        self._cls: dict[str, str] = {}
         if not target_dir:
             return
         root = Path(target_dir)
@@ -180,13 +180,13 @@ def _resolve_file(raw: str) -> str:
     return m.group(1) if m else ""
 
 
-def _awaited_terminals(code_before: str) -> List[str]:
+def _awaited_terminals(code_before: str) -> list[str]:
     return [_terminal(m.group(1))
             for m in re.finditer(r"await\s+([A-Za-z_][\w\.]*)\s*\(", code_before or "")]
 
 
-def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
-              defs: _DefIndex) -> Dict[str, str]:
+def _classify(finding: dict[str, Any], ctx_cache: dict[str, _FileContext],
+              defs: _DefIndex) -> dict[str, str]:
     ftype = finding.get("type", "")
     file = finding.get("file") or ""
     lines = finding.get("lines") or []
@@ -253,25 +253,25 @@ def _classify(finding: Dict[str, Any], ctx_cache: Dict[str, _FileContext],
     return _c("no dismissal rule matched", impact="unknown")
 
 
-def _d(reason: str) -> Dict[str, str]:
+def _d(reason: str) -> dict[str, str]:
     return {"status": "dismissed", "reason": reason, "impact": "none"}
 
 
-def _c(reason: str, impact: str = "unknown") -> Dict[str, str]:
+def _c(reason: str, impact: str = "unknown") -> dict[str, str]:
     return {"status": "confirmed", "reason": reason, "impact": impact}
 
 
-def verify_findings(findings: List[Dict[str, Any]],
-                    target_dir: Optional[str] = None) -> Dict[str, Any]:
+def verify_findings(findings: list[dict[str, Any]],
+                    target_dir: str | None = None) -> dict[str, Any]:
     """Return {findings: [...+status/reason/impact], summary: {...}}.
 
     target_dir enables cost-aware dismissal (resolving awaited callees across the
     scanned codebase). Without it, `parallelize` findings fall back to structural
     checks only.
     """
-    ctx_cache: Dict[str, _FileContext] = {}
+    ctx_cache: dict[str, _FileContext] = {}
     defs = _DefIndex(target_dir)
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     confirmed = high = 0
     for f in findings:
         verdict = _classify(f, ctx_cache, defs)
