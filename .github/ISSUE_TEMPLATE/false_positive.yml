@@ -1,0 +1,59 @@
+name: False positive
+description: Relay flagged code that is actually fine.
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives matter more to us than missed detections - Relay's whole value is
+        that its output is worth reading. Thanks for reporting one.
+
+  - type: dropdown
+    id: detector
+    attributes:
+      label: Which detector flagged it?
+      options:
+        - SyncOutput
+        - SequentialTools
+        - CacheMiss
+        - BlockingIO
+        - ColdStart
+        - Prefetch
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: The flagged code
+      description: The smallest snippet that still gets flagged.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-fine
+    attributes:
+      label: Why it is not a latency problem
+      description: >
+        What does the verification pass not know? For example: the call is already
+        wrapped in a thread pool, the awaits are data-dependent, the response is not
+        streamable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verdict
+    attributes:
+      label: Verification verdict
+      description: The `status` and `reason` Relay gave the finding, from `relay verify`.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Relay version
+      placeholder: "0.3.0"
+    validations:
+      required: true

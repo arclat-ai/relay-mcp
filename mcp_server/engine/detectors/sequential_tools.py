@@ -1,12 +1,12 @@
-from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 
 class SequentialToolDetector(BaseDetector):
     """Flags runs of consecutive, data-independent awaited calls that could run
     concurrently via asyncio.gather()."""
 
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         groups: dict = {}
         for s in timeline:
             if s.span_type == "tool_call":

@@ -1,0 +1,13 @@
+# Normalize line endings so contributors on Windows and Unix see the same diffs.
+* text=auto eol=lf
+
+# PowerShell is happier with CRLF.
+*.ps1 text eol=crlf
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.ico binary
+
+# Keep generated/vendored noise out of language stats and diffs.
+assets/** linguist-documentation

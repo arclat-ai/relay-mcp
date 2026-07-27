@@ -1,0 +1,69 @@
+name: Bug report
+description: Relay crashed, or reported something that is wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. The most useful bug reports include the smallest snippet of
+        Python that Relay handles incorrectly.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did Relay do, and what did you expect instead?
+      placeholder: "`relay verify` confirmed a blocking-I/O finding on a call that is not blocking."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest code Relay gets wrong, plus the command you ran.
+      render: python
+      placeholder: |
+        # foo.py
+        async def handler():
+            await client.chat.completions.create(model="gpt-4o", messages=msgs)
+
+        # $ relay verify .
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Relay output
+      description: Paste the full output. `--json` output is even better.
+      render: shell
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: How were you running Relay?
+      options:
+        - CLI (`relay`)
+        - MCP server in Claude Code
+        - MCP server in another client
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Relay version
+      description: Output of `pip show relay-mcp | head -2`, or the commit SHA.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: Python and OS
+      placeholder: "Python 3.12.3, macOS 15.1"
+    validations:
+      required: true

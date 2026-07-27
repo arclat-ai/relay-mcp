@@ -6,8 +6,6 @@ end-to-end engine on it, asserting on the report dict the MCP tools consume.
 """
 import textwrap
 
-import pytest
-
 from mcp_server.engine.engine import AuditEngine
 
 

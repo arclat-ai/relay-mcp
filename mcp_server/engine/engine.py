@@ -1,18 +1,16 @@
-﻿from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import List
+from dataclasses import asdict
+from datetime import UTC, datetime
 
 from mcp_server.engine.base_detector import Span
 from mcp_server.engine.code_parser import CodeParser
-from mcp_server.engine.scorer import rank_findings, summarize_audit, dedupe_findings
-from mcp_server.engine.verify import verify_findings
-from mcp_server.engine.detectors.sync_output import SyncOutputDetector
-from mcp_server.engine.detectors.sequential_tools import SequentialToolDetector
-from mcp_server.engine.detectors.cache_miss import CacheMissDetector
 from mcp_server.engine.detectors.blocking_io import BlockingIODetector
+from mcp_server.engine.detectors.cache_miss import CacheMissDetector
 from mcp_server.engine.detectors.cold_start import ColdStartDetector
 from mcp_server.engine.detectors.prefetch import PrefetchDetector
-
+from mcp_server.engine.detectors.sequential_tools import SequentialToolDetector
+from mcp_server.engine.detectors.sync_output import SyncOutputDetector
+from mcp_server.engine.scorer import dedupe_findings, rank_findings, summarize_audit
+from mcp_server.engine.verify import verify_findings
 
 SCHEMA_VERSION = "1.1"
 
@@ -57,7 +55,7 @@ class AuditResult:
         findings, verify_summary = self._verify()
         return {
             "schema_version": SCHEMA_VERSION,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "target": self.target,
             "files_scanned": self.files_scanned,
             "summary": self.summary,
@@ -81,7 +79,7 @@ _DETECTORS = [
 class AuditEngine:
     def run_on_codebase(self, directory: str) -> AuditResult:
         parser = CodeParser()
-        timeline: List[Span] = parser.parse_directory(directory)
+        timeline: list[Span] = parser.parse_directory(directory)
         all_findings = []
         for detector in _DETECTORS:
             all_findings.extend(detector.detect(timeline))

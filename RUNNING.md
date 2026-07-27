@@ -69,18 +69,34 @@ python -m mcp_server.server     # or:  relay mcp   /   ./run.sh serve
 The MCP server normally runs as a subprocess managed by Claude Code - you don't
 start it manually in day-to-day use.
 
-## Tests
+## Tests and lint
 
 ```bash
 pytest
+ruff check .
 ```
+
+CI runs both on Python 3.11, 3.12, and 3.13, plus a `relay verify .` smoke test and a
+`twine check` on the built distribution.
 
 ## Publishing to PyPI (for `uvx relay-mcp`)
 
+Releases are automated. Bump `version` in `pyproject.toml`, add a `CHANGELOG.md` entry,
+then:
+
+```bash
+git tag v0.4.0
+git push --tags
+```
+
+The [`release` workflow](.github/workflows/release.yml) builds the distribution and
+publishes it to PyPI via Trusted Publishing - no API token is stored in the repo.
+
+To build locally without publishing:
+
 ```bash
 pip install build twine
-python -m build
-twine upload dist/*
+python -m build && twine check dist/*
 ```
 
 Package name: `relay-mcp` (defined in `pyproject.toml`).

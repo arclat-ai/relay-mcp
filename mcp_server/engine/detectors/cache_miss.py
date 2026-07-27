@@ -1,5 +1,5 @@
-from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 
 class CacheMissDetector(BaseDetector):
@@ -7,7 +7,7 @@ class CacheMissDetector(BaseDetector):
     and that appear at 2+ call sites - identical input means an identical,
     cacheable response, yet full latency is paid at every site."""
 
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         findings = []
         call_map: dict = {}
         for span in timeline:

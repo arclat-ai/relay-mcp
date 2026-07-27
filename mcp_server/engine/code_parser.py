@@ -9,7 +9,6 @@ import ast
 import hashlib
 import uuid
 from pathlib import Path
-from typing import List, Optional
 
 from mcp_server.engine.base_detector import Span
 
@@ -124,14 +123,14 @@ def _resolve_forwarded_stream(func: ast.AST, names: set):
             # params = {..., "stream": <const>, ...}
             if (isinstance(tgt, ast.Name) and tgt.id in names
                     and isinstance(stmt.value, ast.Dict)):
-                for k, v in zip(stmt.value.keys, stmt.value.values):
+                for k, v in zip(stmt.value.keys, stmt.value.values, strict=True):
                     if (isinstance(k, ast.Constant) and k.value == "stream"
                             and isinstance(v, ast.Constant)):
                         resolved = bool(v.value)
     return resolved
 
 
-def _static_prompt_hash(call: ast.Call) -> Optional[str]:
+def _static_prompt_hash(call: ast.Call) -> str | None:
     """Hash of a *fully static* LLM call - every arg/kwarg value is a constant
     (or a structure of constants). Two call sites with the same hash send the
     same input every time, so the response is cacheable. Calls with variable
@@ -143,7 +142,7 @@ def _static_prompt_hash(call: ast.Call) -> Optional[str]:
             return all(_const(e) for e in node.elts)
         if isinstance(node, ast.Dict):
             return all(k is not None and _const(k) and _const(v)
-                       for k, v in zip(node.keys, node.values))
+                       for k, v in zip(node.keys, node.values, strict=True))
         return False
 
     if not call.args and not call.keywords:
@@ -182,8 +181,8 @@ def _make_span(name, span_type, cursor_ms, duration_ms, metadata):
 
 
 class CodeParser:
-    def parse_directory(self, directory: str) -> List[Span]:
-        spans: List[Span] = []
+    def parse_directory(self, directory: str) -> list[Span]:
+        spans: list[Span] = []
         cursor_ms = 0
         self.files_scanned = 0
         for py_file in sorted(Path(directory).rglob("*.py")):
@@ -218,7 +217,7 @@ class CodeParser:
             for n in ast.walk(tree)
             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
-        spans: List[Span] = []
+        spans: list[Span] = []
 
         for node in ast.walk(tree):
             # Synchronous blocking I/O - flagged anywhere.
@@ -301,7 +300,7 @@ class CodeParser:
 
     def _scan_function(self, func: ast.AST, cursor_ms: int):
         """Emit LLM-call spans and groups of genuinely-independent awaited calls."""
-        spans: List[Span] = []
+        spans: list[Span] = []
 
         # 1. LLM calls in this function.
         for n in ast.walk(func):
@@ -360,7 +359,7 @@ class CodeParser:
     def _independent_runs(self, block: list):
         """Find maximal runs (>=2) of consecutive `x = await call()` statements
         that are provably data-independent and side-effect-free."""
-        def is_candidate(stmt) -> Optional[ast.Assign]:
+        def is_candidate(stmt) -> ast.Assign | None:
             if (isinstance(stmt, ast.Assign)
                     and isinstance(stmt.value, ast.Await)
                     and isinstance(stmt.value.value, ast.Call)):

@@ -1,5 +1,5 @@
-from typing import List
-from mcp_server.engine.base_detector import BaseDetector, Span, Finding
+
+from mcp_server.engine.base_detector import BaseDetector, Finding, Span
 
 
 class PrefetchDetector(BaseDetector):
@@ -7,7 +7,7 @@ class PrefetchDetector(BaseDetector):
     stable A->B pattern worth speculatively prefetching. Scoped to the
     independent-tool groups so it never fires on unrelated adjacency."""
 
-    def detect(self, timeline: List[Span]) -> List[Finding]:
+    def detect(self, timeline: list[Span]) -> list[Finding]:
         groups: dict = {}
         for s in timeline:
             if s.span_type == "tool_call" and s.metadata.get("group_id"):
@@ -16,7 +16,7 @@ class PrefetchDetector(BaseDetector):
         pair_hits: dict = {}
         for spans in groups.values():
             spans = sorted(spans, key=lambda s: s.metadata.get("line", 0))
-            for a, b in zip(spans, spans[1:]):
+            for a, b in zip(spans, spans[1:], strict=False):
                 pair = (a.name, b.name)
                 pair_hits.setdefault(pair, []).append(b.duration_ms)
 
