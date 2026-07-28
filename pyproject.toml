@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "relay-mcp"
+name = "relay-arclat"
 version = "0.3.0"
 description = "Relay - AI agent latency auditor as an MCP server and CLI (an Arclat product)"
 readme = "README.md"
