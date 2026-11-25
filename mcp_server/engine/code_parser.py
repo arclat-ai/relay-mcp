@@ -7,13 +7,63 @@ across unrelated functions or files.
 """
 import ast
 import hashlib
-import uuid
+import itertools
+import os
 from pathlib import Path
 
 from mcp_server.engine.base_detector import Span
 
-_SKIP_DIRS = {"venv", ".venv", "__pycache__", ".git", "node_modules", ".mypy_cache",
-              "tests", "test", "examples", "docs"}
+_SKIP_DIRS = {
+    "venv", ".venv", "env", ".env", "__pycache__", ".git", "node_modules",
+    ".mypy_cache", ".pytest_cache", ".ruff_cache", "tests", "test",
+    "examples", "docs", "site-packages", "dist", "build", ".tox", ".nox"
+}
+
+_SPAN_ID_COUNTER = itertools.count(1)
+_GROUP_ID_COUNTER = itertools.count(1)
+
+_IO_MODULES = {"requests", "httpx", "aiohttp", "urllib", "socket", "subprocess",
+               "sqlite3", "psycopg", "psycopg2", "asyncpg", "aiofiles", "boto3",
+               "redis", "pymongo", "smtplib", "ftplib"}
+_IO_METHODS = {"post", "put", "delete", "patch", "request", "execute", "read",
+               "write", "recv", "sendall", "fetch", "query", "download",
+               "upload", "aread", "aiter_lines"}
+_IO_BUILTINS = {"open"}
+
+
+def _is_stub_body(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    body = node.body
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str):
+        body = body[1:]
+    if not body:
+        return True
+    for s in body:
+        if isinstance(s, ast.Pass):
+            continue
+        if isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant) and s.value.value is ...:
+            continue
+        if isinstance(s, ast.Raise):
+            continue
+        return False
+    return True
+
+
+def _classify_function_def(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Cost class of a single function definition: 'io', 'cheap', or 'unknown'."""
+    if _is_stub_body(node):
+        return "unknown"
+    for n in ast.walk(node):
+        if isinstance(n, ast.Await):
+            return "io"
+        if isinstance(n, ast.Name) and n.id in _IO_MODULES:
+            return "io"
+        if isinstance(n, ast.Call):
+            fn = n.func
+            if isinstance(fn, ast.Name) and fn.id in _IO_BUILTINS:
+                return "io"
+            if isinstance(fn, ast.Attribute) and fn.attr in _IO_METHODS:
+                return "io"
+    return "cheap"
 
 # Precise LLM-call detection. We match on the FINAL attribute of the call chain
 # plus a context token, so `loop.run_in_executor(...)` is never mistaken for an
@@ -32,6 +82,21 @@ _SYNC_HTTP = {"requests.get", "requests.post", "requests.put", "requests.delete"
               "requests.patch", "requests.head", "requests.request",
               "urllib.request.urlopen", "urlopen"}
 _SYNC_DB = {"session.execute", "cursor.execute", "collection.find", "conn.execute"}
+_SYNC_CLOUD_CALLS = {
+    "boto3.client", "boto3.resource",
+    "s3.get_object", "s3.put_object", "s3.delete_object", "s3.list_objects", "s3.list_objects_v2",
+    "s3.download_file", "s3.upload_file", "s3.download_fileobj", "s3.upload_fileobj",
+    "s3_client.get_object", "s3_client.put_object", "s3_client.delete_object",
+    "dynamodb.get_item", "dynamodb.put_item", "dynamodb.update_item", "dynamodb.delete_item", "dynamodb.query", "dynamodb.scan",
+    "sqs.send_message", "sqs.receive_messages", "sqs.delete_message", "sns.publish",
+    "blob.download_as_bytes", "blob.download_as_string", "blob.download_as_text",
+    "blob.upload_from_string", "blob.upload_from_filename", "blob.upload_from_file",
+}
+_SYNC_CLOUD_TERMINALS = {
+    "get_object", "put_object", "download_file", "upload_file",
+    "download_as_bytes", "download_as_string", "download_as_text",
+    "upload_from_string", "upload_from_filename",
+}
 # Blocking calls only meaningful inside an async function (in a sync script
 # `time.sleep` is fine; on the event loop it stalls every concurrent task).
 _SYNC_SLEEP = {"time.sleep"}
@@ -44,7 +109,9 @@ _CLIENT_CTORS = {"OpenAI", "AsyncOpenAI", "Anthropic", "AsyncAnthropic",
                  "openai.OpenAI", "openai.AsyncOpenAI",
                  "anthropic.Anthropic", "anthropic.AsyncAnthropic",
                  "httpx.Client", "httpx.AsyncClient",
-                 "aiohttp.ClientSession", "requests.Session"}
+                 "aiohttp.ClientSession", "requests.Session",
+                 "boto3.client", "boto3.resource",
+                 "storage.Client", "bigquery.Client", "firestore.Client"}
 # Function names where constructing a client is expected (startup / DI paths).
 _INIT_NAME_TOKENS = ("init", "setup", "client", "connect", "start", "boot",
                      "main", "create", "build", "factory", "session", "lifespan")
@@ -160,16 +227,34 @@ def _names_used(node: ast.AST) -> set:
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
 
 
-def _assign_targets(node: ast.Assign) -> set:
+def _assign_targets(node: ast.stmt) -> set:
     out = set()
-    for tgt in node.targets:
-        out |= {n.id for n in ast.walk(tgt) if isinstance(n, ast.Name)}
+    if isinstance(node, ast.Assign):
+        for tgt in node.targets:
+            out |= {n.id for n in ast.walk(tgt) if isinstance(n, ast.Name)}
+    elif isinstance(node, ast.AnnAssign):
+        out |= {n.id for n in ast.walk(node.target) if isinstance(n, ast.Name)}
     return out
+
+
+def _target_str(stmt: ast.stmt) -> str:
+    if isinstance(stmt, ast.AnnAssign):
+        if isinstance(stmt.target, ast.Name):
+            return stmt.target.id
+        return "_"
+    if isinstance(stmt, ast.Assign) and stmt.targets:
+        tgt = stmt.targets[0]
+        if isinstance(tgt, ast.Name):
+            return tgt.id
+        if isinstance(tgt, (ast.Tuple, ast.List)):
+            names = [n.id for n in tgt.elts if isinstance(n, ast.Name)]
+            return f"({', '.join(names)})" if names else "_"
+    return "_"
 
 
 def _make_span(name, span_type, cursor_ms, duration_ms, metadata):
     span = Span(
-        id=str(uuid.uuid4())[:8],
+        id=f"s{next(_SPAN_ID_COUNTER)}",
         name=name,
         start_ms=cursor_ms,
         end_ms=cursor_ms + duration_ms,
@@ -181,23 +266,46 @@ def _make_span(name, span_type, cursor_ms, duration_ms, metadata):
 
 
 class CodeParser:
+    def __init__(self):
+        self.files_scanned = 0
+        self.def_index: dict[str, str] = {}
+
+    def _absorb_def(self, name: str, cls: str) -> None:
+        cur = self.def_index.get(name)
+        if cur == "io" or cls == "io":
+            self.def_index[name] = "io"
+        elif cur == "cheap" or cls == "cheap":
+            self.def_index[name] = "cheap"
+        else:
+            self.def_index[name] = "unknown"
+
     def parse_directory(self, directory: str) -> list[Span]:
         spans: list[Span] = []
         cursor_ms = 0
         self.files_scanned = 0
-        for py_file in sorted(Path(directory).rglob("*.py")):
-            if any(part in _SKIP_DIRS for part in py_file.parts):
-                continue
-            self.files_scanned += 1
-            new_spans, cursor_ms = self._parse_file(str(py_file), cursor_ms)
-            spans.extend(new_spans)
+        self.def_index = {}
+        target_path = Path(directory)
+        if not target_path.is_dir():
+            return spans
+
+        for root, dirs, files in os.walk(directory, followlinks=False):
+            dirs[:] = [
+                d for d in dirs
+                if d not in _SKIP_DIRS and not d.startswith(".")
+            ]
+            for file in sorted(files):
+                if file.endswith(".py"):
+                    py_path = os.path.join(root, file)
+                    self.files_scanned += 1
+                    new_spans, cursor_ms = self._parse_file(py_path, cursor_ms)
+                    spans.extend(new_spans)
         return spans
 
     def _parse_file(self, file_path: str, cursor_ms: int):
         try:
             source = Path(file_path).read_text(encoding="utf-8", errors="ignore")
             tree = ast.parse(source)
-        except (SyntaxError, ValueError):
+        except (OSError, SyntaxError, ValueError):
             return [], cursor_ms
 
         self._source = source
@@ -217,6 +325,10 @@ class CodeParser:
             for n in ast.walk(tree)
             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                self._absorb_def(node.name, _classify_function_def(node))
+
         spans: list[Span] = []
 
         for node in ast.walk(tree):
@@ -269,6 +381,8 @@ class CodeParser:
             return emit("api_call", 500, "http")
         if call_name in _SYNC_DB:
             return emit("db_query", 200, "db")
+        if in_async and (call_name in _SYNC_CLOUD_CALLS or _terminal(call_name) in _SYNC_CLOUD_TERMINALS):
+            return emit("api_call", 600, "cloud")
         # sleep / subprocess are only latency bugs when they run on the event
         # loop - in plain sync code they're normal, so don't flag them there.
         if in_async and call_name in _SYNC_SLEEP:
@@ -332,16 +446,16 @@ class CodeParser:
         for block in self._statement_blocks(func):
             groups = self._independent_runs(block)
             for group in groups:
-                gid = str(uuid.uuid4())[:8]
+                gid = f"g{next(_GROUP_ID_COUNTER)}"
                 for stmt in group:
-                    call = stmt.value.value  # Assign -> Await -> Call
+                    call = stmt.value.value  # Assign or AnnAssign -> Await -> Call
                     line = getattr(stmt, "lineno", 0)
                     span, cursor_ms = _make_span(
                         name=_node_name(call.func) or f"tool@{line}",
                         span_type="tool_call", cursor_ms=cursor_ms, duration_ms=400,
                         metadata={"group_id": gid, "code": self._snippet(stmt),
                                   "call_src": self._snippet(call),
-                                  "targets": sorted(_assign_targets(stmt)),
+                                  "targets": [_target_str(stmt)],
                                   "file": self._file, "line": line},
                     )
                     spans.append(span)
@@ -359,14 +473,21 @@ class CodeParser:
     def _independent_runs(self, block: list):
         """Find maximal runs (>=2) of consecutive `x = await call()` statements
         that are provably data-independent and side-effect-free."""
-        def is_candidate(stmt) -> ast.Assign | None:
-            if (isinstance(stmt, ast.Assign)
-                    and isinstance(stmt.value, ast.Await)
-                    and isinstance(stmt.value.value, ast.Call)):
-                call_name = _node_name(stmt.value.value.func)
-                if _terminal(call_name) in _ORDERED_TERMINALS:
-                    return None
-                return stmt
+        def is_candidate(stmt) -> ast.stmt | None:
+            if isinstance(stmt, ast.Assign):
+                if (isinstance(stmt.value, ast.Await)
+                        and isinstance(stmt.value.value, ast.Call)):
+                    call_name = _node_name(stmt.value.value.func)
+                    if _terminal(call_name) in _ORDERED_TERMINALS:
+                        return None
+                    return stmt
+            elif isinstance(stmt, ast.AnnAssign):
+                if (stmt.value and isinstance(stmt.value, ast.Await)
+                        and isinstance(stmt.value.value, ast.Call)):
+                    call_name = _node_name(stmt.value.value.func)
+                    if _terminal(call_name) in _ORDERED_TERMINALS:
+                        return None
+                    return stmt
             return None
 
         runs, current, produced = [], [], set()

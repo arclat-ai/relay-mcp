@@ -142,8 +142,11 @@ class _DefIndex:
     scanned codebase. IO dominates (if any definition does I/O, treat the name
     as I/O); otherwise CHEAP if any concrete definition is cheap; else UNKNOWN."""
 
-    def __init__(self, target_dir: str | None):
-        self._cls: dict[str, str] = {}
+    def __init__(self, target_dir: str | None, precomputed: dict[str, str] | None = None):
+        if precomputed is not None:
+            self._cls = dict(precomputed)
+            return
+        self._cls = {}
         if not target_dir:
             return
         root = Path(target_dir)
@@ -262,15 +265,16 @@ def _c(reason: str, impact: str = "unknown") -> dict[str, str]:
 
 
 def verify_findings(findings: list[dict[str, Any]],
-                    target_dir: str | None = None) -> dict[str, Any]:
+                    target_dir: str | None = None,
+                    def_index: dict[str, str] | None = None) -> dict[str, Any]:
     """Return {findings: [...+status/reason/impact], summary: {...}}.
 
     target_dir enables cost-aware dismissal (resolving awaited callees across the
     scanned codebase). Without it, `parallelize` findings fall back to structural
-    checks only.
+    checks only. If def_index is provided, it avoids rescanning the target directory.
     """
     ctx_cache: dict[str, _FileContext] = {}
-    defs = _DefIndex(target_dir)
+    defs = _DefIndex(target_dir, precomputed=def_index)
     out: list[dict[str, Any]] = []
     confirmed = high = 0
     for f in findings:

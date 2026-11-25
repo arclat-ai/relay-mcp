@@ -3,7 +3,7 @@
 # Relay MCP - dev runner (macOS / Linux / Git Bash)
 #
 # Usage:
-#   ./run.sh install        Install the relay-mcp package in editable mode
+#   ./run.sh install        Install the relay-arclat package in editable mode
 #   ./run.sh register       Add relay to ~/.claude/claude_code_config.json
 #   ./run.sh test [DIR]     Run the audit engine directly on DIR (default: .)
 #   ./run.sh serve          Start the MCP server in the foreground (stdio; debug)
@@ -16,8 +16,8 @@ CONFIG="$HOME/.claude/claude_code_config.json"
 PY="${PYTHON:-python3}"
 
 install_pkg() {
-  echo "==> pip install -e ."
-  (cd "$ROOT" && "$PY" -m pip install -e .)
+  echo "==> pip install -e '.[dev]'"
+  (cd "$ROOT" && "$PY" -m pip install -e ".[dev]")
 }
 
 register_mcp() {

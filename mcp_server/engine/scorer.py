@@ -8,17 +8,23 @@ def _file_of(location: str) -> str:
     if ".py" not in location:
         return location                    # abstract location e.g. 'A -> B'
     loc = location.split("@")[-1]          # strip 'requests.get@' style prefix
-    return loc.rsplit(":", 1)[0]           # strip trailing ':line' or ':a-b'
+    parts = loc.rsplit(":", 1)
+    if len(parts) == 2 and any(c.isdigit() for c in parts[1]) and all(c.isdigit() or c == "-" for c in parts[1].strip()):
+        return parts[0]
+    return loc
 
 
 def _lines_of(location: str) -> list[int]:
     """Extract line numbers from a location's trailing ':NN' or ':a-b'."""
     if ".py" not in location:
         return []
-    tail = location.split("@")[-1].rsplit(":", 1)
-    if len(tail) < 2:
+    parts = location.split("@")[-1].rsplit(":", 1)
+    if len(parts) < 2:
         return []
-    return [int(n) for n in tail[1].split("-") if n.isdigit()]
+    seg = parts[1].strip()
+    if not (any(c.isdigit() for c in seg) and all(c.isdigit() or c == "-" for c in seg)):
+        return []
+    return [int(n) for n in seg.split("-") if n.isdigit()]
 
 
 def dedupe_findings(findings: list[Finding]) -> list[Finding]:

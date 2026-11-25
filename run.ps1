@@ -2,7 +2,7 @@
   Relay MCP - dev runner (Windows / PowerShell)
 
   Usage:
-    .\run.ps1 install        Install the relay-mcp package in editable mode
+    .\run.ps1 install        Install the relay-arclat package in editable mode
     .\run.ps1 register       Add relay to ~/.claude/claude_code_config.json
     .\run.ps1 test [DIR]     Run the audit engine directly on DIR (default: current dir)
     .\run.ps1 serve          Start the MCP server in the foreground (stdio; for debugging)
@@ -19,9 +19,9 @@ $Root = $PSScriptRoot
 $ConfigPath = Join-Path $env:USERPROFILE ".claude\claude_code_config.json"
 
 function Install-Pkg {
-    Write-Host "==> pip install -e ." -ForegroundColor Cyan
+    Write-Host "==> pip install -e '.[dev]'" -ForegroundColor Cyan
     Push-Location $Root
-    try { python -m pip install -e . } finally { Pop-Location }
+    try { python -m pip install -e ".[dev]" } finally { Pop-Location }
 }
 
 function Register-Mcp {
