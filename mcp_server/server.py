@@ -283,7 +283,7 @@ def _reindent_replacement(source: str, before: str, after: str) -> tuple[str | N
             indent = first_line[:indent_len]
             actual_before = newline.join(candidate_slice)
             indented_after = newline.join(
-                indent + l if l.strip() else "" for l in after.splitlines()
+                indent + line if line.strip() else "" for line in after.splitlines()
             )
             prefix = newline.join(source_lines[:i]) + (newline if i > 0 else "")
             suffix = (newline if i + len(before_lines) < len(source_lines) else "") + newline.join(

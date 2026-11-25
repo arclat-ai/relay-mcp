@@ -261,7 +261,7 @@ def test_syntax_error_resilience(tmp_path):
     (tmp_path / "valid.py").write_text("def ok(): pass\n", encoding="utf-8")
 
     parser = CodeParser()
-    spans = parser.parse_directory(str(tmp_path))
+    parser.parse_directory(str(tmp_path))
     # broken.py is skipped cleanly without raising SyntaxError
     assert parser.files_scanned == 2
 
