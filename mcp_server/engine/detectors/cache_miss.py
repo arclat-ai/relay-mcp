@@ -25,19 +25,19 @@ class CacheMissDetector(BaseDetector):
                 description=(
                     f"The same fully-static LLM call appears at {len(spans)} call sites. "
                     "Identical input produces an identical response - cache it "
-                    "(in-process dict or Redis) instead of paying full latency each time."
+                    "(in-process dict or Redis) instead of paying full latency each time.\n"
+                    "Example:\n"
+                    "  cache_key = hashlib.md5(prompt.encode()).hexdigest()\n"
+                    "  if cached := await cache.get(cache_key):\n"
+                    "      return cached\n"
+                    "  response = await llm.call(prompt)\n"
+                    "  await cache.set(cache_key, response, ex=3600)"
                 ),
                 time_lost_ms=int((len(spans) - 1) * avg_dur),
                 location=first.name,
                 rank=0,
-                code_before=first.metadata.get("code", ""),
-                code_after=(
-                    "cache_key = hashlib.md5(prompt.encode()).hexdigest()\n"
-                    "if cached := await cache.get(cache_key):\n"
-                    "    return cached\n"
-                    "response = await llm.call(prompt)\n"
-                    "await cache.set(cache_key, response, ex=3600)"
-                ),
+                code_before="",
+                code_after="",
                 effort="medium",
                 impact="medium",
             ))

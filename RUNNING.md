@@ -29,7 +29,7 @@ Edit `~/.claude/claude_code_config.json`:
   "mcpServers": {
     "relay": {
       "command": "uvx",
-      "args": ["relay-mcp"]
+      "args": ["--from", "relay-arclat", "relay-mcp"]
     }
   }
 }
@@ -79,7 +79,7 @@ ruff check .
 CI runs both on Python 3.11, 3.12, and 3.13, plus a `relay verify .` smoke test and a
 `twine check` on the built distribution.
 
-## Publishing to PyPI (for `uvx relay-mcp`)
+## Publishing to PyPI (for `uvx --from relay-arclat relay-mcp`)
 
 Releases are automated. Bump `version` in `pyproject.toml`, add a `CHANGELOG.md` entry,
 then:
@@ -99,4 +99,5 @@ pip install build twine
 python -m build && twine check dist/*
 ```
 
-Package name: `relay-mcp` (defined in `pyproject.toml`).
+Package name: `relay-arclat` (defined in `pyproject.toml`). It installs two commands,
+`relay` and `relay-mcp`.

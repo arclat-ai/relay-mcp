@@ -8,6 +8,10 @@ _KIND_FIX = {
     "db": ("await async_session.execute(query)",
            "Synchronous DB access blocks the event loop, stalling all concurrent "
            "tasks. Use an async driver (asyncpg, aiosqlite, SQLAlchemy async)."),
+    "cloud": ("await asyncio.to_thread(...)  # or use aioboto3 / async cloud client",
+              "Synchronous cloud SDK calls block the event loop, stalling concurrent tasks. "
+              "Use async SDK clients (e.g. aioboto3, google.cloud.firestore.AsyncClient) "
+              "or offload to a worker thread with await asyncio.to_thread(...)."),
     "sleep": ("await asyncio.sleep(...)",
               "time.sleep() inside an async function freezes the entire event "
               "loop - every concurrent task stalls. Use await asyncio.sleep()."),
@@ -31,8 +35,9 @@ class BlockingIODetector(BaseDetector):
                         type="blocking_io",
                         severity="high" if in_async else "medium",
                         title="Make I/O calls async" if kind in ("http", "db")
-                              else ("Replace time.sleep in async code" if kind == "sleep"
-                                    else "Make subprocess calls async"),
+                              else ("Make cloud SDK calls async" if kind == "cloud"
+                                    else ("Replace time.sleep in async code" if kind == "sleep"
+                                          else "Make subprocess calls async")),
                         description=desc,
                         time_lost_ms=span.duration_ms,
                         location=span.name,

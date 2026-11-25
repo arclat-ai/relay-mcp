@@ -13,6 +13,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dependabot for GitHub Actions and pip.
 
 ### Changed
+- The PyPI distribution is now named `relay-arclat`. The commands are unchanged
+  (`relay`, `relay-mcp`); install with `pip install relay-arclat` and run over MCP with
+  `uvx --from relay-arclat relay-mcp`.
 - Rewrote the README around the local, no-key model, with the Relay lockup and CLI
   screenshot.
 - Dropped the stale `.env` / `.env.example` and `mcp_server/requirements.txt`;

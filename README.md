@@ -16,8 +16,8 @@ directly from Claude Code.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <!-- After the first PyPI release, swap the two badges above for these live ones:
-[![PyPI](https://img.shields.io/pypi/v/relay-mcp.svg)](https://pypi.org/project/relay-mcp/)
-[![Python](https://img.shields.io/pypi/pyversions/relay-mcp.svg)](https://pypi.org/project/relay-mcp/)
+[![PyPI](https://img.shields.io/pypi/v/relay-arclat.svg)](https://pypi.org/project/relay-arclat/)
+[![Python](https://img.shields.io/pypi/pyversions/relay-arclat.svg)](https://pypi.org/project/relay-arclat/)
 -->
 
 
@@ -49,7 +49,7 @@ false positives.
 ### In Claude Code (MCP)
 
 ```bash
-claude mcp add relay -- uvx relay-mcp
+claude mcp add relay -- uvx --from relay-arclat relay-mcp
 ```
 
 Or add it to your MCP config (`~/.claude/claude_code_config.json`) by hand:
@@ -59,7 +59,7 @@ Or add it to your MCP config (`~/.claude/claude_code_config.json`) by hand:
   "mcpServers": {
     "relay": {
       "command": "uvx",
-      "args": ["relay-mcp"]
+      "args": ["--from", "relay-arclat", "relay-mcp"]
     }
   }
 }
@@ -74,7 +74,7 @@ That's it - there is no key to configure.
 ### As a CLI
 
 ```bash
-pip install relay-mcp     # or: uv tool install relay-mcp
+pip install relay-arclat  # or: uv tool install relay-arclat
 
 relay scan   .            # structural pass - candidate latency patterns
 relay verify .            # semantic pass  - only the confirmed gaps
@@ -143,7 +143,7 @@ relay mcp                   # run the MCP server (same as relay-mcp)
 ### Use in CI
 
 ```yaml
-- run: pip install relay-mcp
+- run: pip install relay-arclat
 - run: relay verify . --fail-on high
 ```
 
@@ -196,7 +196,7 @@ your source, writes a report, and does nothing else.
 
 ```
 relay-mcp/
-├── mcp_server/          # MCP server + CLI (ships as relay-mcp on PyPI)
+├── mcp_server/          # MCP server + CLI (ships as relay-arclat on PyPI)
 │   ├── server.py        # entry point, exposes the MCP tools
 │   ├── cli.py           # `relay` command (scan / verify / report / mcp)
 │   └── engine/          # audit engine (detectors, scorer, verify, code_parser)

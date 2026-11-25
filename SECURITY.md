@@ -22,7 +22,7 @@ Please include:
 
 - what the issue is and roughly how bad you think it is,
 - the steps or a minimal repository that reproduces it,
-- the Relay version (`pip show relay-mcp`) and your Python version.
+- the Relay version (`pip show relay-arclat`) and your Python version.
 
 You can expect an acknowledgement within 3 business days and an assessment within 7. If
 the report is confirmed, we will agree a disclosure timeline with you and credit you in

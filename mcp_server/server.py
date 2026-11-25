@@ -1,18 +1,33 @@
 """
 Relay MCP Server
-Run via: uvx relay-mcp  (or: python -m mcp_server.server)
+Run via: uvx --from relay-arclat relay-mcp  (or: python -m mcp_server.server)
 
 Relay is the open-source latency-auditor MCP, a product of the Arclat studio.
 """
+import difflib
 import json
+import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+    mcp = FastMCP("relay")
+except ImportError:
+    class FastMCP:  # type: ignore
+        def __init__(self, name: str):
+            self.name = name
+
+        def tool(self):
+            return lambda fn: fn
+
+        def run(self):
+            raise RuntimeError("mcp package is required to run the server. Run: pip install 'mcp>=1.0.0'")
+
+    mcp = FastMCP("relay")
 
 from mcp_server.engine.engine import AuditEngine
-
-mcp = FastMCP("relay")
 
 DASHBOARD_URL = "https://relay.arclat.com/dashboard"
 
@@ -22,12 +37,37 @@ _STATE_PATH = Path.home() / ".relay" / "last-audit.json"
 _last_report: dict | None = None
 
 
+def _atomic_write(path: Path, content: str, mode: int | None = None) -> None:
+    """Atomically write content to a file via a temporary file in the same directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if mode is not None and os.name != "nt":
+        try:
+            os.chmod(path.parent, 0o700)
+        except OSError:
+            pass
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=".tmp_relay_")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        if mode is not None and os.name != "nt":
+            try:
+                os.chmod(tmp_path, mode)
+            except OSError:
+                pass
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _save_last(report: dict) -> None:
     global _last_report
     _last_report = report
     try:
-        _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _STATE_PATH.write_text(json.dumps(report), encoding="utf-8")
+        _atomic_write(_STATE_PATH, json.dumps(report), mode=0o600)
     except OSError:
         pass
 
@@ -67,7 +107,7 @@ def _format_findings(bottlenecks: list) -> str:
         lines.append(f"\n### {icon} [{f['rank']}] {f['title']}")
         lines.append(f"**Location:** {loc_str}")
         lines.append(f"**Severity:** {f['severity'].upper()}  |  **Time lost:** ~{f['time_lost_ms']}ms")
-        lines.append(f"**Fix effort:** {f['effort']}  |  **Impact:** {f['impact']}")
+        lines.append(f"**Fix effort:** {f.get('effort', 'medium')}  |  **Impact:** {f.get('impact', 'medium')}")
         vline = _verification_line(f)
         if vline:
             lines.append(vline)
@@ -78,13 +118,12 @@ def _format_findings(bottlenecks: list) -> str:
     return "\n".join(lines)
 
 
-def _write_report(report: dict, directory: str) -> Path:
+def _write_report(report: dict, directory: str, archive: bool = False) -> Path:
     """
     Persist the audit as a JSON report the Relay dashboard can load.
 
-    Writes two files into the audited directory:
-      - relay-report.json                      (always the latest run)
-      - relay-report-<UTC timestamp>.json      (an immutable history copy)
+    Writes relay-report.json into the audited directory.
+    If archive is True, also writes an immutable timestamped copy relay-report-<stamp>.json.
     Upload either to https://relay.arclat.com/dashboard.
     """
     report = dict(report)
@@ -95,21 +134,27 @@ def _write_report(report: dict, directory: str) -> Path:
     if not out_dir.is_dir():
         out_dir = Path.cwd()
 
-    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     latest = out_dir / "relay-report.json"
-    history = out_dir / f"relay-report-{stamp}.json"
-
     payload = json.dumps(report, indent=2)
-    for target in (latest, history):
+
+    try:
+        _atomic_write(latest, payload)
+    except OSError:
+        pass
+
+    if archive:
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        history = out_dir / f"relay-report-{stamp}.json"
         try:
-            target.write_text(payload, encoding="utf-8")
+            _atomic_write(history, payload)
         except OSError:
             pass
+
     return latest
 
 
 @mcp.tool()
-def audit_codebase(directory: str, write_report: bool = True) -> str:
+def audit_codebase(directory: str, write_report: bool = True, archive_report: bool = False) -> str:
     """
     Audit an AI agent codebase for latency bottlenecks.
     Reads Python files in the given directory and returns ranked findings with
@@ -119,6 +164,7 @@ def audit_codebase(directory: str, write_report: bool = True) -> str:
     Args:
         directory: Absolute path to the codebase directory to audit.
         write_report: Write relay-report.json into the audited directory (default True).
+        archive_report: Also write an immutable timestamped copy relay-report-<timestamp>.json (default False).
     """
     if not Path(directory).is_dir():
         return f"❌ Not a directory: `{directory}`. Pass an absolute path to the codebase root."
@@ -136,7 +182,7 @@ def audit_codebase(directory: str, write_report: bool = True) -> str:
 
     saved_note = ""
     if write_report:
-        report_path = _write_report(report, directory)
+        report_path = _write_report(report, directory, archive=archive_report)
         saved_note = f"\n_Saved to `{report_path}` - upload it to {DASHBOARD_URL} for the full analytics view._\n"
 
     summary = report["summary"]
@@ -215,6 +261,56 @@ def verify_audit() -> str:
     return "\n".join(lines)
 
 
+def _reindent_replacement(source: str, before: str, after: str) -> tuple[str | None, str | None, str | None]:
+    """
+    Locate `before` in `source`, handling both exact match and indented function bodies.
+    Returns (new_source, actual_before_matched, indented_after_replacement).
+    """
+    if before in source:
+        return source.replace(before, after, 1), before, after
+
+    newline = "\r\n" if "\r\n" in source else "\n"
+    source_lines = source.splitlines()
+    before_lines = [b.strip() for b in before.splitlines() if b.strip()]
+    if not before_lines or len(source_lines) < len(before_lines):
+        return None, None, None
+
+    for i in range(len(source_lines) - len(before_lines) + 1):
+        candidate_slice = source_lines[i:i + len(before_lines)]
+        if all(c.strip() == b for c, b in zip(candidate_slice, before_lines, strict=True)):
+            first_line = source_lines[i]
+            indent_len = len(first_line) - len(first_line.lstrip())
+            indent = first_line[:indent_len]
+            actual_before = newline.join(candidate_slice)
+            indented_after = newline.join(
+                indent + l if l.strip() else "" for l in after.splitlines()
+            )
+            prefix = newline.join(source_lines[:i]) + (newline if i > 0 else "")
+            suffix = (newline if i + len(before_lines) < len(source_lines) else "") + newline.join(
+                source_lines[i + len(before_lines):]
+            )
+            if source.endswith(newline) and not suffix.endswith(newline):
+                suffix += newline
+            new_source = prefix + indented_after + suffix
+            return new_source, actual_before, indented_after
+
+    return None, None, None
+
+
+def _generate_diff(file_path: str, old_source: str, new_source: str) -> str:
+    """Generate a unified diff (diff -u) comparing old and new source."""
+    old_lines = old_source.splitlines(keepends=True)
+    new_lines = new_source.splitlines(keepends=True)
+    file_display = file_path.replace("\\", "/")
+    diff = difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=f"a/{file_display}",
+        tofile=f"b/{file_display}",
+    )
+    return "".join(diff)
+
+
 @mcp.tool()
 def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> str:
     """
@@ -229,7 +325,7 @@ def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> s
     if report is None:
         return "No audit has been run yet. Call audit_codebase first."
 
-    bottlenecks = report["bottlenecks"]
+    bottlenecks = report.get("bottlenecks", [])
     match = next((b for b in bottlenecks if b["rank"] == finding_rank), None)
     if match is None:
         return f"No finding with rank {finding_rank}. Valid ranks: {[b['rank'] for b in bottlenecks]}"
@@ -240,6 +336,24 @@ def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> s
     if not file_path or not file_path.endswith(".py"):
         return "This finding has no single file location - pass file_path explicitly."
 
+    resolved_file = Path(file_path).resolve()
+
+    # Security check: Ensure file is within target directory if known
+    target_dir_str = report.get("target", "")
+    if target_dir_str:
+        target_dir = Path(target_dir_str).resolve()
+        if target_dir.is_dir():
+            try:
+                resolved_file.relative_to(target_dir)
+            except ValueError:
+                return (
+                    f"Security error: '{file_path}' resolves outside the audited directory "
+                    f"'{target_dir}'. Refusing to modify files outside target."
+                )
+
+    if not resolved_file.is_file():
+        return f"File not found: {file_path}"
+
     before = match.get("code_before", "")
     after = match.get("code_after", "")
 
@@ -247,29 +361,36 @@ def apply_fix(finding_rank: int, file_path: str = "", dry_run: bool = True) -> s
         return f"Finding '{match['title']}' does not have an automated fix. Apply manually:\n{match['description']}"
 
     try:
-        source = open(file_path, encoding="utf-8").read()
-    except FileNotFoundError:
-        return f"File not found: {file_path}"
+        source = resolved_file.read_text(encoding="utf-8")
+    except OSError as e:
+        return f"Could not read {file_path}: {e}"
 
-    if before not in source:
+    new_source, actual_before, indented_after = _reindent_replacement(source, before, after)
+    if new_source is None:
         return (
             f"Could not locate the exact pattern in {file_path}.\n"
             f"Apply manually - replace:\n```python\n{before}\n```\nwith:\n```python\n{after}\n```"
         )
 
-    new_source = source.replace(before, after, 1)
+    diff_text = _generate_diff(file_path, source, new_source)
 
     if dry_run:
         return (
             f"**Dry run - no changes written.**\n\n"
             f"File: `{file_path}`\n\n"
-            f"**Before:**\n```python\n{before}\n```\n\n"
-            f"**After:**\n```python\n{after}\n```\n\n"
-            f"Call with `dry_run=False` to apply."
+            f"```diff\n{diff_text}\n```\n\n"
+            f"Call with `dry_run=False` to apply this change."
         )
 
-    open(file_path, "w", encoding="utf-8").write(new_source)
-    return f"✅ Fix applied to `{file_path}`.\n\nReplaced:\n```python\n{before}\n```\nWith:\n```python\n{after}\n```"
+    try:
+        _atomic_write(resolved_file, new_source)
+    except OSError as e:
+        return f"Failed to write fix to `{file_path}`: {e}"
+
+    return (
+        f"✅ Fix applied to `{file_path}`.\n\n"
+        f"```diff\n{diff_text}\n```"
+    )
 
 
 def main():

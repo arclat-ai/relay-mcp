@@ -55,7 +55,7 @@ body:
     id: version
     attributes:
       label: Relay version
-      description: Output of `pip show relay-mcp | head -2`, or the commit SHA.
+      description: Output of `pip show relay-arclat | head -2`, or the commit SHA.
       placeholder: "0.3.0"
     validations:
       required: true

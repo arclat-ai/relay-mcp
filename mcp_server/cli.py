@@ -111,10 +111,31 @@ def cmd_verify(args) -> int:
     # fail a pipeline. Default `none` keeps the command informational.
     fail_on = getattr(args, "fail_on", "none")
     if fail_on == "high" and s["confirmed_high_impact"] > 0:
+        print(f"\n  {RED(MARK_X)} CI gate failed: {s['confirmed_high_impact']} confirmed high-impact gap(s) remain (--fail-on high)", file=sys.stderr)
         return 1
     if fail_on == "any" and s["confirmed"] > 0:
+        print(f"\n  {RED(MARK_X)} CI gate failed: {s['confirmed']} confirmed gap(s) remain (--fail-on any)", file=sys.stderr)
         return 1
     return 0
+
+
+def _atomic_write_file(path_str: str, content: str) -> None:
+    p = os.path.abspath(path_str)
+    parent = os.path.dirname(p)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    import tempfile
+    fd, tmp = tempfile.mkstemp(dir=parent or None, prefix=".tmp_report_")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp, p)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def cmd_report(args) -> int:
@@ -122,8 +143,11 @@ def cmd_report(args) -> int:
     rd["generator"] = "relay-cli"
     rd["product"] = "relay"
     out = args.output or os.path.join(args.directory, "relay-report.json")
-    with open(out, "w", encoding="utf-8") as fh:
-        json.dump(rd, fh, indent=2)
+    try:
+        _atomic_write_file(out, json.dumps(rd, indent=2))
+    except OSError as e:
+        print(RED(f"failed to write {out}: {e}"), file=sys.stderr)
+        return 1
     s = rd["verification"]
     print(f"{GREEN('$')} {BOLD('relay report')} {args.directory}")
     print(f"  {rd['summary']['total_bottlenecks']} findings "

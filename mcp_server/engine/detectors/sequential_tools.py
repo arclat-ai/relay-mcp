@@ -26,7 +26,12 @@ class SequentialToolDetector(BaseDetector):
 
             before = "\n".join(s.metadata.get("code", "") for s in spans)
             targets = [", ".join(s.metadata.get("targets", [])) or "_" for s in spans]
-            calls = [s.metadata.get("call_src", "").replace("await ", "", 1).strip() for s in spans]
+            calls = [
+                s.metadata.get("call_src", "").strip()[6:].strip()
+                if s.metadata.get("call_src", "").strip().startswith("await ")
+                else s.metadata.get("call_src", "").strip()
+                for s in spans
+            ]
             after = f"{', '.join(targets)} = await asyncio.gather(\n    " + ",\n    ".join(calls) + "\n)"
 
             findings.append(Finding(

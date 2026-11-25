@@ -16,11 +16,19 @@ SCHEMA_VERSION = "1.1"
 
 
 class AuditResult:
-    def __init__(self, bottlenecks: list, summary: dict, target: str = "", files_scanned: int = 0):
+    def __init__(
+        self,
+        bottlenecks: list,
+        summary: dict,
+        target: str = "",
+        files_scanned: int = 0,
+        def_index: dict | None = None,
+    ):
         self.bottlenecks = bottlenecks
         self.summary = summary
         self.target = target
         self.files_scanned = files_scanned
+        self.def_index = def_index
         self._verified = None  # cached (findings_with_verdicts, verify_summary)
 
     def _finding_dict(self, f):
@@ -39,14 +47,18 @@ class AuditResult:
         `verification` key on the finding dict."""
         if self._verified is None:
             raw = [self._finding_dict(b) for b in self.bottlenecks]
-            v = verify_findings(raw, self.target or None)
+            v = verify_findings(raw, self.target or None, def_index=self.def_index)
             annotated = []
             for g in v["findings"]:
+                ver_status = g.pop("status", "confirmed")
+                ver_reason = g.pop("reason", "")
+                ver_impact = g.pop("impact", "medium")
                 g["verification"] = {
-                    "status": g.pop("status"),
-                    "reason": g.pop("reason"),
-                    "impact": g.pop("impact"),
+                    "status": ver_status,
+                    "reason": ver_reason,
+                    "impact": ver_impact,
                 }
+                g["impact"] = ver_impact
                 annotated.append(g)
             self._verified = (annotated, v["summary"])
         return self._verified
@@ -66,22 +78,29 @@ class AuditResult:
         }
 
 
-_DETECTORS = [
-    SyncOutputDetector(),
-    SequentialToolDetector(),
-    CacheMissDetector(),
-    BlockingIODetector(),
-    ColdStartDetector(),
-    PrefetchDetector(),
-]
+def get_default_detectors():
+    return [
+        SyncOutputDetector(),
+        SequentialToolDetector(),
+        CacheMissDetector(),
+        BlockingIODetector(),
+        ColdStartDetector(),
+        PrefetchDetector(),
+    ]
+
+
+_DETECTORS = get_default_detectors()
 
 
 class AuditEngine:
+    def __init__(self, detectors: list | None = None):
+        self.detectors = list(detectors) if detectors is not None else get_default_detectors()
+
     def run_on_codebase(self, directory: str) -> AuditResult:
         parser = CodeParser()
         timeline: list[Span] = parser.parse_directory(directory)
         all_findings = []
-        for detector in _DETECTORS:
+        for detector in self.detectors:
             all_findings.extend(detector.detect(timeline))
         deduped = dedupe_findings(all_findings)
         ranked = rank_findings(deduped)
@@ -91,4 +110,5 @@ class AuditEngine:
             summary=summary,
             target=directory,
             files_scanned=getattr(parser, "files_scanned", 0),
+            def_index=getattr(parser, "def_index", None),
         )

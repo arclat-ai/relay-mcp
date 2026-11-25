@@ -2,7 +2,7 @@ name: Release
 
 # Publishes to PyPI when a v* tag is pushed, using Trusted Publishing
 # (no API token stored in the repo). Configure the publisher once at
-# https://pypi.org/manage/project/relay-mcp/settings/publishing/
+# https://pypi.org/manage/project/relay-arclat/settings/publishing/
 
 on:
   push:
